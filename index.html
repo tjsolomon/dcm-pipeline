@@ -751,7 +751,7 @@ function App() {
         <input type="text" placeholder="Search borrower or loan #..." value={search} onChange={e => setSearch(e.target.value)} style={{padding:"6px 12px",border:"1px solid #c8c6c4",borderRadius:4,fontSize:12,width:190,outline:"none"}} onFocus={e => e.target.style.borderColor = "#0078d4"} onBlur={e => e.target.style.borderColor = "#c8c6c4"}/>
         <FP opts={["All", ...procs]} val={fProc} onChange={setFProc} counts={loans} field="Processor"/>
         <FP opts={["All", ...mlos]} val={fMLO} onChange={setFMLO} counts={loans} field="LoanOfficer"/>
-        <FP opts={["All", ...months]} val={fMonth} onChange={setFMonth} counts={loans.filter(l => l.DisplayClosingDate)} field="closingMonth"/>
+        <FP opts={["All", ...months]} val={fMonth} onChange={setFMonth} counts={loans.filter(l => l.DisplayClosingDate).map(l => ({...l, closingMonth: getMonthKey(l.DisplayClosingDate)}))} field="closingMonth"/>
         <div style={{display:"flex",border:"1px solid #c8c6c4",borderRadius:4,overflow:"hidden",marginLeft:4}}>
           {viewBtn("pipeline", "Pipeline")}
           {viewBtn("calendar", "Calendar")}
