@@ -80,13 +80,18 @@ The app READS pipeline and conditions data, and WRITES Notes and VVOEStatus back
 - **Broker detection:** Currently broken (TODO) — no Investor or Channel field on Pipeline v2. `isBkr()` returns false for all loans
 - **DisplayClosingDate:** Pre-computed cascade (Closed → Scheduled → Estimate → null) by Power Automate flow
 - **Lender:** Pre-merged (Investor priority, Lender fallback) by flow
+- **Month filter:** UI has a month selector that filters loans by closing date. Rules:
+  - Overdue active loans (past closing date, not closed) are always included regardless of selected month
+  - Slipped loans from the *previous* calendar month carry into the current month view — but only once the previous month has fully passed (not mid-month)
+  - Future months show only loans explicitly closing in that month
+- **Processor names:** Stored and displayed in short form natively (e.g. "Chris" not "Christopher Smith") — both filter dropdowns and loan counts use the short name directly
 
 ## Known Issues / TODO
 
 ### High Priority
 - [ ] **Broker/Correspondent detection** — Add Channel field to Pipeline v2 list (or Investor field), update isBkr() helper
 - [ ] **Verify Conditions list field names** — Confirm LoanNumber, ConditionCategory, Condition, ResponsibleParties, ConditionCode match SharePoint internal names
-- [ ] **Test write-back** — Notes save and VVOE status change haven't been tested with live data yet
+- [x] **Write-back confirmed working** — Notes save and VVOE status change work with live SharePoint data (required `odata=verbose` + `__metadata` fix, see SharePoint API Notes above)
 
 ### Future Enhancements
 - [ ] Status field reads as Choice object — may need `item.Status` vs `item.Status.Value` handling in REST API response
@@ -118,6 +123,7 @@ The app READS pipeline and conditions data, and WRITES Notes and VVOEStatus back
 - Currency fields: Returns number
 - Yes/No fields: Returns boolean
 - Update requires entity type lookup + IF-MATCH + X-HTTP-Method: MERGE
+- **MERGE body must use `odata=verbose` Content-Type and include `__metadata: { type: entityType }` in the JSON body** — omitting either causes a 400 error. The entity type is fetched first via `?$select=ListItemEntityTypeFullName` on the list.
 
 ## File Structure
 ```
