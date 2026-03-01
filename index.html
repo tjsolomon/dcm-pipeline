@@ -108,7 +108,7 @@ async function spUpdate(listName, itemId, fields) {
     headers: {
       Authorization: `Bearer ${token}`,
       Accept: "application/json;odata=nometadata",
-      "Content-Type": "application/json;odata=nometadata",
+      "Content-Type": "application/json;odata=verbose",
       "IF-MATCH": "*",
       "X-HTTP-Method": "MERGE",
     },
