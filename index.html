@@ -224,6 +224,11 @@ const channelLabel = (l) => isBkr(l) ? "Broker" : "Correspondent";
 const loanTypeShort = (t) => { if (!t) return "—"; if (t==="Conventional") return "Conf"; const m={"FHA":"FHA","FHA Streamline":"FHA","VA":"VA","USDA":"USDA","Jumbo":"Jumbo","NonQM":"NonQM"}; return m[t]||t; };
 const getMonthKey = (d) => { if (!d) return "No Date"; const t=new Date(d); return `${["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][t.getMonth()]} ${t.getFullYear()}`; };
 const getMonthSort = (d) => { if (!d) return "9999-99"; const t=new Date(d); return `${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,"0")}`; };
+const getMonthStart = (monthKey) => { const [mon,yr]=monthKey.split(" "); const idx=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"].indexOf(mon); return new Date(parseInt(yr),idx,1); };
+
+// Processor display names
+const PROC_SHORT = {"Christopher Guzman":"Chris","Brandy Costello":"Brandy","Mike Zographos":"Mike"};
+const shortProc = (name) => { if (!name) return ""; return PROC_SHORT[name] || name.split(" ")[0]; };
 
 // Urgency
 const urgency = (d, status) => {
@@ -440,7 +445,7 @@ const Card = ({loan:l,onClick:oc}) => {
     <div style={{fontSize:11,color:"#8a8886",marginBottom:6}}>{getMergedLender(l)}{isBkr(l)?" · Broker":""}</div>
     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:(conds>0||(l.LockExpirationDate&&!closed))?6:0}}>
       <span style={{padding:"1px 8px",borderRadius:3,fontWeight:600,fontSize:10,...mc}}>{mloShort}</span>
-      <span style={{padding:"1px 8px",borderRadius:3,fontWeight:600,fontSize:10,...pc}}>{l.Processor}</span>
+      <span style={{padding:"1px 8px",borderRadius:3,fontWeight:600,fontSize:10,...pc}}>{shortProc(l.Processor)}</span>
     </div>
     {((!closed&&conds>0)||(l.LockExpirationDate&&!closed)||(conds===0&&l.Status!=="Processing"&&!closed))&&(
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
@@ -504,7 +509,7 @@ const DetailsView = ({loans,onCardClick:oc}) => {
       <td style={{...tStyle,fontWeight:600}}>{l.BorrowerLastName}, {l.BorrowerFirstName}</td>
       <td style={tStyle}>#{l.Title}</td>
       <td style={tStyle}><span style={{fontSize:10,fontWeight:600,padding:"2px 6px",borderRadius:3,background:sc2.bg,color:sc2.text}}>{l.Status}</span></td>
-      <td style={tStyle}>{l.Processor}</td>
+      <td style={tStyle}>{shortProc(l.Processor)}</td>
       <td style={tStyle}>{mloAbbr(l.LoanOfficer)}</td>
       <td style={tStyle}>{getMergedLender(l)}</td>
       <td style={tStyle}><span style={{fontSize:10,fontWeight:700,padding:"1px 5px",borderRadius:3,background:isBkr(l)?"#edebe9":"#deecf9",color:isBkr(l)?"#605e5c":"#0078d4"}}>{isBkr(l)?"Broker":"Corres"}</span></td>
@@ -601,15 +606,16 @@ const CalendarView = ({loans,onCardClick:oc}) => {
 };
 
 // ─── Filter Pill ────────────────────────────────────────
-const FP = ({opts,val,onChange:oc2,counts,field}) => {
+const FP = ({opts,val,onChange:oc2,counts,field,labelFn}) => {
   const [open,setOpen]=useState(false);const ref=useRef(null);
   useEffect(()=>{const h=e=>{if(ref.current&&!ref.current.contains(e.target))setOpen(false);};document.addEventListener("mousedown",h);return()=>document.removeEventListener("mousedown",h);},[]);
-  const disp=val==="All"?`All ${field==="Processor"?"Processors":field==="LoanOfficer"?"MLOs":"Months"}`:val;
+  const dispVal=val==="All"?`All ${field==="Processor"?"Processors":field==="LoanOfficer"?"MLOs":"Months"}`:(labelFn?labelFn(val):val);
   return <div ref={ref} style={{position:"relative"}}>
-    <button onClick={()=>setOpen(!open)} style={{padding:"6px 14px",border:`1px solid ${val!=="All"?"#0078d4":"#c8c6c4"}`,borderRadius:20,fontSize:12,cursor:"pointer",display:"flex",alignItems:"center",gap:4,background:val!=="All"?"#0078d4":"#fff",color:val!=="All"?"#fff":"#323130",whiteSpace:"nowrap"}}>{disp} ▾</button>
+    <button onClick={()=>setOpen(!open)} style={{padding:"6px 14px",border:`1px solid ${val!=="All"?"#0078d4":"#c8c6c4"}`,borderRadius:20,fontSize:12,cursor:"pointer",display:"flex",alignItems:"center",gap:4,background:val!=="All"?"#0078d4":"#fff",color:val!=="All"?"#fff":"#323130",whiteSpace:"nowrap"}}>{dispVal} ▾</button>
     {open&&<div style={{position:"absolute",top:"100%",left:0,marginTop:4,background:"#fff",border:"1px solid #edebe9",borderRadius:6,boxShadow:"0 4px 12px rgba(0,0,0,0.12)",zIndex:50,minWidth:200,maxHeight:280,overflowY:"auto"}}>
       {opts.map(opt=>{const c=opt==="All"?counts.length:counts.filter(l=>l[field]===opt).length;const v=opt==="All"?counts.reduce((s,l)=>s+(l.TotalLoanAmount||0),0):counts.filter(l=>l[field]===opt).reduce((s,l)=>s+(l.TotalLoanAmount||0),0);
-        return <button key={opt} onClick={()=>{oc2(opt);setOpen(false);}} style={{display:"flex",justifyContent:"space-between",width:"100%",padding:"8px 14px",border:"none",background:opt===val?"#deecf9":"#fff",cursor:"pointer",fontSize:12,color:"#323130",textAlign:"left",gap:8}} onMouseEnter={e=>{if(opt!==val)e.target.style.background="#f3f2f1";}} onMouseLeave={e=>{if(opt!==val)e.target.style.background="#fff";}}><span>{opt==="All"?(field==="Processor"?"All Processors":field==="LoanOfficer"?"All MLOs":"All Months"):opt}</span><span style={{color:"#8a8886",whiteSpace:"nowrap"}}>{c} · {fmtVol(v)}</span></button>;
+        const optLabel=opt==="All"?(field==="Processor"?"All Processors":field==="LoanOfficer"?"All MLOs":"All Months"):(labelFn?labelFn(opt):opt);
+        return <button key={opt} onClick={()=>{oc2(opt);setOpen(false);}} style={{display:"flex",justifyContent:"space-between",width:"100%",padding:"8px 14px",border:"none",background:opt===val?"#deecf9":"#fff",cursor:"pointer",fontSize:12,color:"#323130",textAlign:"left",gap:8}} onMouseEnter={e=>{if(opt!==val)e.target.style.background="#f3f2f1";}} onMouseLeave={e=>{if(opt!==val)e.target.style.background="#fff";}}><span>{optLabel}</span><span style={{color:"#8a8886",whiteSpace:"nowrap"}}>{c} · {fmtVol(v)}</span></button>;
       })}
     </div>}
   </div>;
@@ -716,7 +722,12 @@ function App() {
   const filtered = loans.filter(l => {
     if (fProc !== "All" && l.Processor !== fProc) return false;
     if (fMLO !== "All" && l.LoanOfficer !== fMLO) return false;
-    if (fMonth !== "All" && getMonthKey(l.DisplayClosingDate) !== fMonth) return false;
+    if (fMonth !== "All") {
+      const loanDate = l.DisplayClosingDate ? new Date(l.DisplayClosingDate) : null;
+      const inMonth = loanDate && getMonthKey(l.DisplayClosingDate) === fMonth;
+      const isOverdueActive = l.Status !== "Closed" && loanDate && loanDate < getMonthStart(fMonth);
+      if (!inMonth && !isOverdueActive) return false;
+    }
     if (search) { const s = search.toLowerCase(); if (!`${l.BorrowerFirstName} ${l.BorrowerLastName} ${l.Title} ${l.LoanOfficer} ${l.Processor}`.toLowerCase().includes(s)) return false; }
     return true;
   });
@@ -749,7 +760,7 @@ function App() {
       </div>
       <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
         <input type="text" placeholder="Search borrower or loan #..." value={search} onChange={e => setSearch(e.target.value)} style={{padding:"6px 12px",border:"1px solid #c8c6c4",borderRadius:4,fontSize:12,width:190,outline:"none"}} onFocus={e => e.target.style.borderColor = "#0078d4"} onBlur={e => e.target.style.borderColor = "#c8c6c4"}/>
-        <FP opts={["All", ...procs]} val={fProc} onChange={setFProc} counts={loans} field="Processor"/>
+        <FP opts={["All", ...procs]} val={fProc} onChange={setFProc} counts={loans} field="Processor" labelFn={shortProc}/>
         <FP opts={["All", ...mlos]} val={fMLO} onChange={setFMLO} counts={loans} field="LoanOfficer"/>
         <FP opts={["All", ...months]} val={fMonth} onChange={setFMonth} counts={loans.filter(l => l.DisplayClosingDate).map(l => ({...l, closingMonth: getMonthKey(l.DisplayClosingDate)}))} field="closingMonth"/>
         <div style={{display:"flex",border:"1px solid #c8c6c4",borderRadius:4,overflow:"hidden",marginLeft:4}}>
