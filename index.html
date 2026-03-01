@@ -725,8 +725,10 @@ function App() {
     if (fMonth !== "All") {
       const loanDate = l.DisplayClosingDate ? new Date(l.DisplayClosingDate) : null;
       const inMonth = loanDate && getMonthKey(l.DisplayClosingDate) === fMonth;
-      const isOverdueActive = l.Status !== "Closed" && loanDate && loanDate < getMonthStart(fMonth);
-      if (!inMonth && !isOverdueActive) return false;
+      const monthStart = getMonthStart(fMonth);
+      const prevMonthStart = new Date(monthStart.getFullYear(), monthStart.getMonth() - 1, 1);
+      const isSlippedFromPrev = l.Status !== "Closed" && loanDate && loanDate >= prevMonthStart && loanDate < monthStart;
+      if (!inMonth && !isSlippedFromPrev) return false;
     }
     if (search) { const s = search.toLowerCase(); if (!`${l.BorrowerFirstName} ${l.BorrowerLastName} ${l.Title} ${l.LoanOfficer} ${l.Processor}`.toLowerCase().includes(s)) return false; }
     return true;
