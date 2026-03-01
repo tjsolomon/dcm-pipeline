@@ -727,7 +727,10 @@ function App() {
       const inMonth = loanDate && getMonthKey(l.DisplayClosingDate) === fMonth;
       const monthStart = getMonthStart(fMonth);
       const prevMonthStart = new Date(monthStart.getFullYear(), monthStart.getMonth() - 1, 1);
-      const isSlippedFromPrev = l.Status !== "Closed" && loanDate && loanDate >= prevMonthStart && loanDate < monthStart;
+      const now = new Date(); const todayMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+      // Only pull slipped loans from prev month once that prev month has fully passed
+      const prevMonthHasPassed = prevMonthStart < todayMonthStart;
+      const isSlippedFromPrev = l.Status !== "Closed" && loanDate && loanDate >= prevMonthStart && loanDate < monthStart && prevMonthHasPassed;
       if (!inMonth && !isSlippedFromPrev) return false;
     }
     if (search) { const s = search.toLowerCase(); if (!`${l.BorrowerFirstName} ${l.BorrowerLastName} ${l.Title} ${l.LoanOfficer} ${l.Processor}`.toLowerCase().includes(s)) return false; }
