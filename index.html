@@ -711,7 +711,7 @@ function App() {
   if (loading && loans.length === 0) return <div className="loading"><div className="spinner"/><div>Loading pipeline data...</div></div>;
 
   // Data loaded — compute filters and stats
-  const procs = [...new Set(loans.map(l => l.Processor))].sort();
+  const procs = [...new Set(loans.map(l => shortProc(l.Processor)).filter(Boolean))].sort();
   const mlos = [...new Set(loans.map(l => l.LoanOfficer))].sort();
   const months = [...new Set(loans.filter(l => l.DisplayClosingDate).map(l => getMonthKey(l.DisplayClosingDate)))].sort((a, b) => {
     const la = loans.find(l => getMonthKey(l.DisplayClosingDate) === a);
@@ -720,7 +720,7 @@ function App() {
   });
 
   const filtered = loans.filter(l => {
-    if (fProc !== "All" && l.Processor !== fProc) return false;
+    if (fProc !== "All" && shortProc(l.Processor) !== fProc) return false;
     if (fMLO !== "All" && l.LoanOfficer !== fMLO) return false;
     if (fMonth !== "All") {
       const loanDate = l.DisplayClosingDate ? new Date(l.DisplayClosingDate) : null;
@@ -760,7 +760,7 @@ function App() {
       </div>
       <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
         <input type="text" placeholder="Search borrower or loan #..." value={search} onChange={e => setSearch(e.target.value)} style={{padding:"6px 12px",border:"1px solid #c8c6c4",borderRadius:4,fontSize:12,width:190,outline:"none"}} onFocus={e => e.target.style.borderColor = "#0078d4"} onBlur={e => e.target.style.borderColor = "#c8c6c4"}/>
-        <FP opts={["All", ...procs]} val={fProc} onChange={setFProc} counts={loans} field="Processor" labelFn={shortProc}/>
+        <FP opts={["All", ...procs]} val={fProc} onChange={setFProc} counts={loans.map(l => ({...l, Processor: shortProc(l.Processor)}))} field="Processor"/>
         <FP opts={["All", ...mlos]} val={fMLO} onChange={setFMLO} counts={loans} field="LoanOfficer"/>
         <FP opts={["All", ...months]} val={fMonth} onChange={setFMonth} counts={loans.filter(l => l.DisplayClosingDate).map(l => ({...l, closingMonth: getMonthKey(l.DisplayClosingDate)}))} field="closingMonth"/>
         <div style={{display:"flex",border:"1px solid #c8c6c4",borderRadius:4,overflow:"hidden",marginLeft:4}}>
