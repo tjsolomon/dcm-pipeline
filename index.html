@@ -156,6 +156,7 @@ function mapPipelineItem(item) {
     Notes: item.Notes || "",
     VVOEStatus: item.VVOEStatus || null,
     ConditionsCount: item.ConditionsCount || 0,
+    Modified: item.Modified || null,
   };
 }
 
@@ -177,7 +178,7 @@ async function fetchPipelineData() {
     "LockExpirationDate","TitleCompany","NewConstruction","OutsideTitle","IncomeFinalized","InitialCDRequest",
     "AppraisalRequestDate","AppraisalInspectionDate","AppraisalExpectedDeliveryDate",
     "AppraisalDeliveryDate","ProcessingDate","InitialSubmissionDate","ApprovedDate",
-    "ConditionSubmissionDate","ClearToCloseDate","Notes","VVOEStatus","ConditionsCount"
+    "ConditionSubmissionDate","ClearToCloseDate","Notes","VVOEStatus","ConditionsCount","Modified"
   ].join(",");
 
   const [pipelineRaw, conditionsRaw] = await Promise.all([
@@ -188,6 +189,15 @@ async function fetchPipelineData() {
   const loans = pipelineRaw.map(mapPipelineItem);
   const conditions = conditionsRaw.map(mapConditionItem);
 
+  // Find most recent Modified timestamp from SharePoint data
+  let lastModified = null;
+  pipelineRaw.forEach(item => {
+    if (item.Modified) {
+      const m = new Date(item.Modified);
+      if (!lastModified || m > lastModified) lastModified = m;
+    }
+  });
+
   // Group conditions by loan number
   const condMap = {};
   conditions.forEach(c => {
@@ -196,7 +206,7 @@ async function fetchPipelineData() {
     condMap[key].push(c);
   });
 
-  return { loans, condMap };
+  return { loans, condMap, lastModified };
 }
 
 async function saveNotes(spId, notes) {
@@ -306,7 +316,7 @@ const getProcColor = (name) => PROC_COLORS[name] || {background:"#edebe9",color:
 // ─── Shared Components ──────────────────────────────────
 const SH = ({t,r}) => <div style={{fontSize:12,fontWeight:700,textTransform:"uppercase",letterSpacing:.5,color:"#0078d4",marginBottom:10,paddingBottom:6,borderBottom:"2px solid #deecf9",display:"flex",justifyContent:"space-between",alignItems:"center"}}><span>{t}</span>{r}</div>;
 const Ce = ({l,v,h}) => <div style={{padding:"8px 10px",background:h?"#fff0e0":"#faf9f8",borderRadius:4,border:h?"1px solid #ca5010":"none"}}><div style={{fontSize:10,color:"#605e5c",textTransform:"uppercase",letterSpacing:.3,marginBottom:2}}>{l}</div><div style={{fontSize:13,fontWeight:600,color:h?"#9a3c08":"#323130"}}>{v}</div></div>;
-const St = ({n,c,l}) => <div style={{display:"flex",alignItems:"center",gap:6}}><span style={{fontSize:20,fontWeight:700,color:c}}>{n}</span><span style={{fontSize:11,color:"#605e5c",lineHeight:1.3}}>{l}</span></div>;
+const St = ({n,c,l,active:isActive,onClick:oc3}) => <div onClick={oc3} style={{display:"flex",alignItems:"center",gap:6,cursor:"pointer",padding:"4px 10px",borderRadius:6,background:isActive?"#deecf9":"transparent",border:isActive?`1px solid ${c}`:"1px solid transparent",transition:"all .15s"}} onMouseEnter={e=>{if(!isActive)e.currentTarget.style.background="#f3f2f1";}} onMouseLeave={e=>{if(!isActive)e.currentTarget.style.background=isActive?"#deecf9":"transparent";}}><span style={{fontSize:20,fontWeight:700,color:c}}>{n}</span><span style={{fontSize:11,color:"#605e5c",lineHeight:1.3}}>{l}</span></div>;
 
 // ─── Appraisal Timeline ─────────────────────────────────
 const AT = ({loan:l}) => {
@@ -638,6 +648,8 @@ function App() {
   const [fMonth, setFMonth] = useState("All");
   const [search, setSearch] = useState("");
   const [view, setView] = useState("pipeline");
+  const [myPipeline, setMyPipeline] = useState(false);
+  const [statFilter, setStatFilter] = useState(null); // null | "active" | "soon" | "urgent" | "closed"
 
   // Auth check on mount
   useEffect(() => {
@@ -667,7 +679,7 @@ function App() {
       const data = await fetchPipelineData();
       setLoans(data.loans);
       setCondMap(data.condMap);
-      setLastSync(new Date());
+      setLastSync(data.lastModified || new Date());
       setError(null);
     } catch (e) {
       console.error("Data load error:", e);
@@ -712,6 +724,8 @@ function App() {
   if (loading && loans.length === 0) return <div className="loading"><div className="spinner"/><div>Loading pipeline data...</div></div>;
 
   // Data loaded — compute filters and stats
+  const account = msalInstance.getAllAccounts()[0];
+  const userName = account?.name || "";
   const procs = [...new Set(loans.map(l => shortProc(l.Processor)).filter(Boolean))].sort();
   const mlos = [...new Set(loans.map(l => l.LoanOfficer))].sort();
   const months = [...new Set(loans.filter(l => l.DisplayClosingDate).map(l => getMonthKey(l.DisplayClosingDate)))].sort((a, b) => {
@@ -721,6 +735,10 @@ function App() {
   });
 
   const filtered = loans.filter(l => {
+    if (myPipeline && userName) {
+      const nameMatch = l.LoanOfficer === userName || l.Processor === userName || shortProc(l.Processor) === userName.split(" ")[0];
+      if (!nameMatch) return false;
+    }
     if (fProc !== "All" && shortProc(l.Processor) !== fProc) return false;
     if (fMLO !== "All" && l.LoanOfficer !== fMLO) return false;
     if (fMonth !== "All") {
@@ -732,6 +750,10 @@ function App() {
       if (!inMonth && !isOverdue) return false;
     }
     if (search) { const s = search.toLowerCase(); if (!`${l.BorrowerFirstName} ${l.BorrowerLastName} ${l.Title} ${l.LoanOfficer} ${l.Processor}`.toLowerCase().includes(s)) return false; }
+    // Stat filter — applied after other filters
+    if (statFilter === "closed" && l.Status !== "Closed") return false;
+    if (statFilter === "urgent") { const d = diffDays(l.DisplayClosingDate); if (l.Status === "Closed" || d === null || d > 3) return false; }
+    if (statFilter === "soon") { const d = diffDays(l.DisplayClosingDate); if (l.Status === "Closed" || d === null || d > 7) return false; }
     return true;
   });
 
@@ -751,7 +773,7 @@ function App() {
   const soonN = active.filter(l => { const d = diffDays(l.DisplayClosingDate); return d !== null && d > 3 && d <= 7; }).length;
   const vol = active.reduce((s, l) => s + (l.TotalLoanAmount || 0), 0);
 
-  const syncLabel = lastSync ? `Last synced: ${lastSync.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}` : "Syncing...";
+  const syncLabel = lastSync ? `Pipeline data as of ${lastSync.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}` : "Syncing...";
   const viewBtn = (id, label) => <button onClick={() => setView(id)} style={{ padding: "6px 12px", fontSize: 12, border: "none", cursor: "pointer", fontWeight: 600, background: view === id ? "#0078d4" : "#fff", color: view === id ? "#fff" : "#605e5c", borderRight: "1px solid #c8c6c4" }}>{label}</button>;
 
   return <div style={{fontFamily:"'Segoe UI',-apple-system,sans-serif",background:"#f3f2f1",minHeight:"100vh",color:"#323130"}}>
@@ -766,6 +788,7 @@ function App() {
         <FP opts={["All", ...procs]} val={fProc} onChange={setFProc} counts={loans.map(l => ({...l, Processor: shortProc(l.Processor)}))} field="Processor"/>
         <FP opts={["All", ...mlos]} val={fMLO} onChange={setFMLO} counts={loans} field="LoanOfficer"/>
         <FP opts={["All", ...months]} val={fMonth} onChange={setFMonth} counts={loans.filter(l => l.DisplayClosingDate).map(l => ({...l, closingMonth: getMonthKey(l.DisplayClosingDate)}))} field="closingMonth"/>
+        <button onClick={() => setMyPipeline(!myPipeline)} title={myPipeline ? "Showing my loans — click to show all" : "Show only my loans"} style={{padding:"6px 14px",border:`1px solid ${myPipeline?"#0078d4":"#c8c6c4"}`,borderRadius:20,fontSize:12,cursor:"pointer",fontWeight:600,background:myPipeline?"#0078d4":"#fff",color:myPipeline?"#fff":"#323130",whiteSpace:"nowrap"}}>My Pipeline</button>
         <div style={{display:"flex",border:"1px solid #c8c6c4",borderRadius:4,overflow:"hidden",marginLeft:4}}>
           {viewBtn("pipeline", "Pipeline")}
           {viewBtn("calendar", "Calendar")}
@@ -776,11 +799,12 @@ function App() {
     </div>
 
     {/* Stats Bar */}
-    <div style={{background:"#fff",padding:"10px 20px",borderBottom:"1px solid #edebe9",display:"flex",gap:20,flexWrap:"wrap",alignItems:"center"}}>
-      <St n={active.length} c="#0078d4" l="Active pipeline"/>
-      <St n={soonN} c="#ca5010" l="Closing within 7 days"/>
-      <St n={urgN} c="#a80000" l="Closing within 3 days"/>
-      <St n={closedN} c="#107c10" l="Closed this month"/>
+    <div style={{background:"#fff",padding:"10px 20px",borderBottom:"1px solid #edebe9",display:"flex",gap:12,flexWrap:"wrap",alignItems:"center"}}>
+      <St n={active.length} c="#0078d4" l="Active pipeline" active={!statFilter} onClick={() => setStatFilter(null)}/>
+      <St n={soonN} c="#ca5010" l="Closing within 7 days" active={statFilter==="soon"} onClick={() => setStatFilter(statFilter==="soon"?null:"soon")}/>
+      <St n={urgN} c="#a80000" l="Closing within 3 days" active={statFilter==="urgent"} onClick={() => setStatFilter(statFilter==="urgent"?null:"urgent")}/>
+      <St n={closedN} c="#107c10" l="Closed this month" active={statFilter==="closed"} onClick={() => setStatFilter(statFilter==="closed"?null:"closed")}/>
+      {statFilter && <button onClick={() => setStatFilter(null)} style={{fontSize:11,color:"#605e5c",background:"#edebe9",border:"none",borderRadius:12,padding:"3px 10px",cursor:"pointer",fontWeight:600}}>Clear filter</button>}
       <div style={{marginLeft:"auto",fontSize:13,color:"#323130"}}><span style={{fontWeight:700}}>{fmtVol(vol)}</span><span style={{color:"#605e5c",fontSize:11,marginLeft:4}}>pipeline volume</span></div>
     </div>
 
