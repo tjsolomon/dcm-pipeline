@@ -396,15 +396,15 @@ const DetailPanel = ({loan:l,condMap,onClose:oc,onSaveNotes,onSaveVVOE}) => {
   return <>
     <div onClick={oc} style={{position:"fixed",inset:0,background:"var(--overlay)",zIndex:1000,cursor:"pointer",backdropFilter:"blur(2px)"}}/>
     <div style={{position:"fixed",top:0,right:0,width:520,height:"100%",background:"var(--bg-card)",zIndex:1001,boxShadow:"var(--shadow-lg)",display:"flex",flexDirection:"column",borderLeft:"1px solid var(--border)"}}>
-      <div style={{padding:"24px 28px",borderBottom:"1px solid var(--border)",position:"relative",flexShrink:0}}>
-        <button onClick={oc} style={{position:"absolute",top:16,right:20,background:"var(--bg-alt)",border:"1px solid var(--border)",color:"var(--text-dim)",width:28,height:28,borderRadius:6,fontSize:14,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",transition:"all .15s ease"}}>✕</button>
-        <div style={{fontSize:20,fontWeight:700,color:"var(--text)",marginBottom:4,letterSpacing:-.3}}>{l.BorrowerLastName}, {l.BorrowerFirstName}</div>
-        <div style={{fontSize:13,color:"var(--text-dim)"}}>#{l.Title} · {l.LoanType} {l.PurposeType} · {fmtCurrencyFull(l.TotalLoanAmount)}</div>
+      <div style={{padding:"20px 24px",background:`linear-gradient(135deg,${sc.border},${sc.text})`,color:"#fff",position:"relative",flexShrink:0}}>
+        <button onClick={oc} style={{position:"absolute",top:12,right:16,background:"rgba(255,255,255,0.15)",border:"none",color:"#fff",width:28,height:28,borderRadius:6,fontSize:14,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",transition:"all .15s ease",backdropFilter:"blur(4px)"}}>✕</button>
+        <div style={{fontSize:20,fontWeight:700,marginBottom:4,letterSpacing:-.3}}>{l.BorrowerLastName}, {l.BorrowerFirstName}</div>
+        <div style={{fontSize:13,opacity:.85}}>#{l.Title} · {l.LoanType} {l.PurposeType} · {fmtCurrencyFull(l.TotalLoanAmount)}</div>
         <div style={{display:"flex",gap:6,marginTop:12,flexWrap:"wrap"}}>
-          <span style={{padding:"4px 10px",borderRadius:20,fontSize:11,fontWeight:600,background:sc.bg,color:sc.text,border:`1px solid ${sc.border}22`}}>{l.Status}</span>
-          <span style={{padding:"4px 10px",borderRadius:20,fontSize:11,fontWeight:600,color:uc.text,background:uc.bg}}>Close: {l.DisplayClosingDate?fmtFull(l.DisplayClosingDate):"TBD"}</span>
-          {isOutsideTitle(l)&&<span style={{padding:"4px 10px",borderRadius:20,fontSize:11,fontWeight:600,background:"rgba(168,85,247,0.08)",color:"#7c3aed"}}>Outside Title</span>}
-          {l.NewConstruction&&<span style={{padding:"4px 10px",borderRadius:20,fontSize:11,fontWeight:600,background:"rgba(6,182,212,0.08)",color:"#0891b2"}}>New Construction</span>}
+          <span style={{padding:"4px 10px",borderRadius:20,fontSize:11,fontWeight:600,background:"rgba(255,255,255,0.2)",color:"#fff"}}>{l.Status}</span>
+          <span style={{padding:"4px 10px",borderRadius:20,fontSize:11,fontWeight:600,background:"rgba(255,255,255,0.15)",color:"#fff"}}>Close: {l.DisplayClosingDate?fmtFull(l.DisplayClosingDate):"TBD"}</span>
+          {isOutsideTitle(l)&&<span style={{padding:"4px 10px",borderRadius:20,fontSize:11,fontWeight:600,background:"rgba(255,255,255,0.15)",color:"#fff"}}>Outside Title</span>}
+          {l.NewConstruction&&<span style={{padding:"4px 10px",borderRadius:20,fontSize:11,fontWeight:600,background:"rgba(255,255,255,0.15)",color:"#fff"}}>New Construction</span>}
         </div>
       </div>
       <div style={{flex:1,overflowY:"auto",padding:"24px 28px"}}>
@@ -484,9 +484,9 @@ const DetailsView = ({loans,onCardClick:oc}) => {
   const sortedClosed=useMemo(()=>[...closedLoans].sort((a,b)=>(b.DisplayClosingDate||"").localeCompare(a.DisplayClosingDate||"")),[closedLoans]);
   const doSort=(col)=>{if(sortCol===col)setSortDir(d=>d==="asc"?"desc":"asc");else{setSortCol(col);setSortDir("asc");}};
   const arrow=(col)=>sortCol===col?(sortDir==="asc"?" ↑":" ↓"):"";
-  const hStyle={padding:"10px 8px",textAlign:"left",fontSize:10,fontWeight:600,color:"var(--text-dim)",textTransform:"uppercase",letterSpacing:.4,cursor:"pointer",whiteSpace:"nowrap",userSelect:"none",borderBottom:"1px solid var(--border)"};
+  const hStyle={padding:"8px 6px",textAlign:"left",fontSize:10,fontWeight:600,color:"var(--text-dim)",textTransform:"uppercase",letterSpacing:.4,cursor:"pointer",whiteSpace:"nowrap",userSelect:"none",borderBottom:"1px solid var(--border)"};
   const hStyleStatic={...hStyle,cursor:"default"};
-  const tStyle={padding:"10px 8px",borderBottom:"1px solid var(--border)",fontSize:13,color:"var(--text)"};
+  const tStyle={padding:"8px 6px",borderBottom:"1px solid var(--border)",fontSize:12,color:"var(--text)",whiteSpace:"nowrap"};
   const badge=(text,bg,color)=>text?<span key={text} style={{fontSize:10,fontWeight:600,padding:"2px 6px",borderRadius:4,background:bg,color,whiteSpace:"nowrap"}}>{text}</span>:null;
 
   const renderHeaders=()=><tr>
@@ -524,19 +524,19 @@ const DetailsView = ({loans,onCardClick:oc}) => {
       <td style={tStyle}>{shortProc(l.Processor)}</td>
       <td style={tStyle}>{mloAbbr(l.LoanOfficer)}</td>
       <td style={tStyle}>{getMergedLender(l)}</td>
-      <td style={tStyle}><span style={{fontSize:10,fontWeight:600,padding:"2px 6px",borderRadius:4,background:isBkr(l)?"var(--bg-alt)":"var(--accent-bg)",color:isBkr(l)?"var(--text-dim)":"var(--accent)"}}>{isBkr(l)?"Broker":"Corres"}</span></td>
+      <td style={tStyle}>{isBkr(l)?"Broker":"Corres"}</td>
       <td style={tStyle}>{l.PurposeType || "—"}</td>
       <td style={tStyle}>{l.LoanType || "—"}</td>
-      <td style={tStyle}>{l.LockExpirationDate?<span style={{fontWeight:600,color:luc2.text,fontSize:11}}>{fmt(l.LockExpirationDate)}</span>:"—"}</td>
-      <td style={tStyle}><span style={{fontWeight:600,color:uc.text,fontSize:11}}>{l.DisplayClosingDate?fmt(l.DisplayClosingDate):"TBD"}</span></td>
-      <td style={tStyle}>{l.ConditionsCount>0?<span style={{color:"#d97706",fontWeight:600}}>{l.ConditionsCount}</span>:closed?"—":"✓"}</td>
+      <td style={tStyle}>{l.LockExpirationDate?<span style={{fontWeight:600,color:(lockUrg2==="overdue"||lockUrg2==="urgent")?"#dc2626":"var(--text)",fontSize:12}}>{fmt(l.LockExpirationDate)}</span>:"—"}</td>
+      <td style={tStyle}><span style={{fontWeight:600,color:(urg2==="overdue"||urg2==="urgent")?"#dc2626":"var(--text)",fontSize:12}}>{l.DisplayClosingDate?fmt(l.DisplayClosingDate):"TBD"}</span></td>
+      <td style={tStyle}>{l.ConditionsCount>0?<span style={{fontWeight:600}}>{l.ConditionsCount}</span>:closed?"—":"✓"}</td>
       <td style={tStyle}><div style={{display:"flex",flexWrap:"wrap",gap:3}}>{flags.map(f=>badge(f.t,f.bg,f.c))}</div></td>
     </tr>;
   };
 
   return <div style={{padding:"16px 20px",overflowY:"auto",height:"calc(100vh - 145px)"}}>
     <div style={{background:"var(--bg-card)",borderRadius:"var(--radius-lg)",border:"1px solid var(--border)",overflow:"hidden",marginBottom:20,boxShadow:"var(--shadow)"}}>
-      <div style={{overflowX:"auto"}}><table style={{width:"100%",borderCollapse:"collapse"}}><thead>{renderHeaders()}</thead><tbody>{sortedActive.map(renderRow)}</tbody></table>
+      <div><table style={{width:"100%",borderCollapse:"collapse",tableLayout:"fixed"}}><thead>{renderHeaders()}</thead><tbody>{sortedActive.map(renderRow)}</tbody></table>
         {sortedActive.length===0&&<div style={{textAlign:"center",color:"var(--text-muted)",fontSize:13,padding:32}}>No active loans match current filters</div>}
       </div>
     </div>
@@ -545,7 +545,7 @@ const DetailsView = ({loans,onCardClick:oc}) => {
         <span>Closed This Month ({sortedClosed.length})</span>
       </div>
       <div style={{background:"var(--bg-card)",borderRadius:"var(--radius-lg)",border:"1px solid var(--border)",overflow:"hidden",opacity:.7,boxShadow:"var(--shadow)"}}>
-        <div style={{overflowX:"auto"}}><table style={{width:"100%",borderCollapse:"collapse"}}><thead>{renderHeaders()}</thead><tbody>{sortedClosed.map(renderRow)}</tbody></table></div>
+        <div><table style={{width:"100%",borderCollapse:"collapse",tableLayout:"fixed"}}><thead>{renderHeaders()}</thead><tbody>{sortedClosed.map(renderRow)}</tbody></table></div>
       </div>
     </>}
   </div>;
@@ -606,7 +606,7 @@ const CalendarView = ({loans,onCardClick:oc}) => {
           const dl=d?loansByDay[d]||[]:[];const today=d&&isToday(d);const hol=d?holidayMap[d]:null;
           return <td key={di} style={{border:"1px solid var(--border)",padding:5,verticalAlign:"top",height:105,background:hol?"rgba(245,158,11,0.04)":today?"var(--accent-bg)":d?"var(--bg-card)":"var(--bg-alt)",position:"relative"}}>
             {d&&<div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:hol?2:4}}>
-              <span style={{fontSize:11,fontWeight:today?700:500,color:today?"var(--accent)":"var(--text-dim)",paddingLeft:2}}>{today?`${monthName.slice(0,3)} ${d}`:d}</span>
+              <span style={{fontSize:11,fontWeight:today?700:500,color:today?"var(--accent)":"var(--text-dim)",paddingLeft:2}}>{d}</span>
             </div>}
             {hol&&<div style={{fontSize:9,color:"#d97706",fontWeight:600,marginBottom:3,paddingLeft:2}}>{hol}</div>}
             {dl.map(l=>{const sc2=STATUS_COLORS[l.Status]||STATUS_COLORS.Closed;return <div key={l.Title} onClick={()=>oc(l)} style={{background:sc2.bg,color:sc2.text,fontSize:10,fontWeight:600,padding:"3px 5px",borderRadius:4,marginBottom:2,cursor:"pointer",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",borderLeft:`2px solid ${sc2.border}`,transition:"opacity .15s ease"}} title={`${l.BorrowerLastName}, ${l.BorrowerFirstName} - ${l.Status}`}>{l.BorrowerLastName}, {l.BorrowerFirstName}</div>;})}
@@ -835,7 +835,7 @@ function App() {
     {/* Views */}
     {view === "pipeline" && <div style={{display:"flex",gap:12,padding:"16px 16px",overflowX:"auto",alignItems:"flex-start"}}>
       {STATUS_ORDER.map(status => { const sc = STATUS_COLORS[status]; const ls = columns[status]; return <div key={status} style={{background:"var(--bg-card)",borderRadius:"var(--radius-lg)",minWidth:250,maxWidth:250,display:"flex",flexDirection:"column",border:"1px solid var(--border)",flexShrink:0,boxShadow:"var(--shadow)"}}>
-        <div style={{padding:"12px 14px",display:"flex",alignItems:"center",justifyContent:"space-between",borderBottom:`2px solid ${sc.border}`,borderTopLeftRadius:"var(--radius-lg)",borderTopRightRadius:"var(--radius-lg)",position:"sticky",top:0,zIndex:2}}><span style={{fontSize:11,fontWeight:600,textTransform:"uppercase",letterSpacing:.5,color:sc.text}}>{status}</span><span style={{fontSize:11,fontWeight:500,color:"var(--text-dim)"}}>{ls.length}</span></div>
+        <div style={{padding:"12px 14px",display:"flex",alignItems:"center",justifyContent:"space-between",borderBottom:`2px solid ${sc.border}`,background:sc.bg,borderTopLeftRadius:"var(--radius-lg)",borderTopRightRadius:"var(--radius-lg)",position:"sticky",top:0,zIndex:2}}><span style={{fontSize:11,fontWeight:600,textTransform:"uppercase",letterSpacing:.5,color:sc.text}}>{status}</span><span style={{fontSize:11,fontWeight:500,color:sc.text,opacity:.6}}>{ls.length}</span></div>
         <div style={{padding:10,display:"flex",flexDirection:"column",gap:8,background:"var(--bg-alt)",borderBottomLeftRadius:"var(--radius-lg)",borderBottomRightRadius:"var(--radius-lg)"}}>
           {ls.map(l => <Card key={l.Title} loan={l} onClick={setSel}/>)}
           {ls.length === 0 && <div style={{textAlign:"center",color:"var(--text-muted)",fontSize:12,padding:24}}>No loans</div>}
