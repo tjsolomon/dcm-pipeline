@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Office Pipeline - DCM Operations</title>
+<title>Office Pipeline | DCM</title>
 <script src="https://alcdn.msauth.net/browser/2.38.0/js/msal-browser.min.js"></script>
 <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
 <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -34,7 +34,7 @@ const CONFIG = {
   // Azure AD / Entra ID
   clientId: "fda4bbf5-6010-4343-b3c9-1f82ee3b4090",
   tenantId: "aa14bd5b-4ade-4898-8235-d7b18e6f59e1",
-  redirectUri: "https://tjsolomon.github.io/dcm-pipeline/",
+  redirectUri: "https://pipeline.dcmloan.com",
 
   // SharePoint
   siteUrl: "https://dcmloan.sharepoint.com",
@@ -131,6 +131,7 @@ function mapPipelineItem(item) {
     PurposeType: item.PurposeType || "",
     TotalLoanAmount: item.TotalLoanAmount || 0,
     Lender: item.Lender || "",
+    Channel: item.Channel || "",
     OutsideTitle: item.OutsideTitle || false,
     LoanType: item.LoanType || "",
     OccupancyType: item.OccupancyType || "",
@@ -171,7 +172,7 @@ function mapConditionItem(item) {
 async function fetchPipelineData() {
   const fields = [
     "Id","Title","LoanID","BorrowerFirstName","BorrowerLastName","LoanOfficer","Processor",
-    "Status","PurposeType","TotalLoanAmount","Lender","LoanType","OccupancyType",
+    "Status","PurposeType","TotalLoanAmount","Lender","Channel","LoanType","OccupancyType",
     "DisplayClosingDate","ClosingEstimateDate","ScheduledClosingDate","ClosedDate",
     "LockExpirationDate","TitleCompany","NewConstruction","OutsideTitle","IncomeFinalized","InitialCDRequest",
     "AppraisalRequestDate","AppraisalInspectionDate","AppraisalExpectedDeliveryDate",
@@ -219,7 +220,7 @@ const fmtVol = (n) => n >= 1000000 ? `$${(n/1000000).toFixed(2)}M` : `$${(n/1000
 const purposeShort = (p) => p === "Refinance" ? "Refi" : p === "Purchase" ? "Pur" : (p||"—");
 const getMergedLender = (l) => l.Lender || "—";
 const isOutsideTitle = (l) => l.OutsideTitle || false;
-const isBkr = (l) => false; // TODO: Add Channel field to Pipeline v2 to detect Broker vs Correspondent
+const isBkr = (l) => l.Channel === "Broker";
 const channelLabel = (l) => isBkr(l) ? "Broker" : "Correspondent";
 const loanTypeShort = (t) => { if (!t) return "—"; if (t==="Conventional") return "Conf"; const m={"FHA":"FHA","FHA Streamline":"FHA","VA":"VA","USDA":"USDA","Jumbo":"Jumbo","NonQM":"NonQM"}; return m[t]||t; };
 const getMonthKey = (d) => { if (!d) return "No Date"; const t=new Date(d); return `${["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][t.getMonth()]} ${t.getFullYear()}`; };
