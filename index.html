@@ -727,12 +727,9 @@ function App() {
       const loanDate = l.DisplayClosingDate ? new Date(l.DisplayClosingDate) : null;
       const inMonth = loanDate && getMonthKey(l.DisplayClosingDate) === fMonth;
       const monthStart = getMonthStart(fMonth);
-      const prevMonthStart = new Date(monthStart.getFullYear(), monthStart.getMonth() - 1, 1);
-      const now = new Date(); const todayMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-      // Only pull slipped loans from prev month once that prev month has fully passed
-      const prevMonthHasPassed = prevMonthStart < todayMonthStart;
-      const isSlippedFromPrev = l.Status !== "Closed" && loanDate && loanDate >= prevMonthStart && loanDate < monthStart && prevMonthHasPassed;
-      if (!inMonth && !isSlippedFromPrev) return false;
+      // Active loans with closing date before selected month are overdue — always include
+      const isOverdue = l.Status !== "Closed" && loanDate && loanDate < monthStart;
+      if (!inMonth && !isOverdue) return false;
     }
     if (search) { const s = search.toLowerCase(); if (!`${l.BorrowerFirstName} ${l.BorrowerLastName} ${l.Title} ${l.LoanOfficer} ${l.Processor}`.toLowerCase().includes(s)) return false; }
     return true;
