@@ -3,7 +3,7 @@
 ## What This Is
 Single-page React application (one HTML file) that serves as the operational pipeline dashboard for Dominion Capital Mortgage (DCM). Hosted on GitHub Pages, authenticates via MSAL/Azure AD, reads and writes to SharePoint lists via REST API.
 
-**Live URL:** https://tjsolomon.github.io/dcm-pipeline/
+**Live URL:** https://pipeline.dcmloan.com (custom domain, also accessible at https://tjsolomon.github.io/dcm-pipeline/)
 **Repo:** https://github.com/tjsolomon/dcm-pipeline
 
 ## Tech Stack
@@ -20,7 +20,7 @@ Single-page React application (one HTML file) that serves as the operational pip
 - Azure AD app: "DCM Pipeline UI"
 - Client ID: `fda4bbf5-6010-4343-b3c9-1f82ee3b4090`
 - Tenant ID: `aa14bd5b-4ade-4898-8235-d7b18e6f59e1`
-- Redirect URI: `https://tjsolomon.github.io/dcm-pipeline/`
+- Redirect URI: `https://pipeline.dcmloan.com`
 - Scope: `https://dcmloan.sharepoint.com/Sites.ReadWrite.All`
 - Single tenant (DCM org only)
 - Admin consent granted for Sites.ReadWrite.All (delegated)
@@ -33,6 +33,7 @@ Internal field names (verified from SharePoint API):
 - Title (loan number, upsert key), LoanID, BorrowerFirstName, BorrowerLastName
 - LoanOfficer, Processor, Status (Choice), PurposeType
 - TotalLoanAmount (Currency), Lender (pre-merged: Investor priority, Lender fallback)
+- Channel (Single line of text: "Broker" or "Correspondent", computed by Power Automate)
 - LoanType, OccupancyType, TitleCompany
 - ClosingEstimateDate, ScheduledClosingDate, ClosedDate, DisplayClosingDate (computed cascade)
 - LockExpirationDate, AppraisalRequestDate, AppraisalInspectionDate
@@ -41,8 +42,9 @@ Internal field names (verified from SharePoint API):
 - NewConstruction (Yes/No), OutsideTitle (Yes/No, computed), IncomeFinalized (Yes/No)
 - InitialCDRequest (Date), ConditionsCount (Number, updated by conditions flow)
 - Notes (Multi-line text, manual), VVOEStatus (Choice: Needed/Working/Complete, manual)
+- Modified (DateTime, auto-managed by SharePoint — used to show last SP update time)
 
-**IMPORTANT:** There is NO `Investor` field on Pipeline v2. The flow pre-merges Investor/Lender into the single `Lender` field. `OutsideTitle` is pre-computed as Yes/No. There is currently no `Channel` field (Broker vs Correspondent detection is not available — TODO).
+**IMPORTANT:** There is NO `Investor` field on Pipeline v2. The flow pre-merges Investor/Lender into the single `Lender` field. `OutsideTitle` is pre-computed as Yes/No. `Channel` is computed by Power Automate ("Broker" or "Correspondent").
 
 **Conditions List** (one row per outstanding condition, updated 2x/day)
 Fields: Title, LoanNumber, ConditionCategory, Condition, ResponsibleParties, ConditionCode
@@ -65,31 +67,44 @@ The app READS pipeline and conditions data, and WRITES Notes and VVOEStatus back
 ### Detail Panel (slide-out on card click)
 - Loan info grid, LendingPad link, editable Notes (writes to SharePoint), VVOE status buttons (writes to SharePoint)
 - Outstanding conditions from Conditions list, appraisal timeline, status milestones
+- Escape key closes the detail panel
 
 ### Visual Design
 - Fluent UI / Microsoft style (Segoe UI, Microsoft color palette)
+- **Dark mode** supported — follows system preference on first load, manual toggle in header (sun/moon icon)
+  - Dark palette: `#1b1a19` background, `#2d2c2b` cards, `#e1dfdd` text, `#3b3a39` borders
+  - CSS custom properties (`:root` / `[data-dark="true"]`) for all theme colors
+  - Preference stored in React state (resets on page reload)
 - Urgency colors: Red (≤3 days or overdue), Orange (4-7 days), Neutral gray (8+)
 - No green for "normal" dates — green only used for completed states
 - Status column colors: Processing=blue, Submission=purple, Approved=teal, Conditions=orange, CTC=green, Closed=gray
-- MLO and Processor colored badges
-- Lock expiration shown on cards with same urgency colors
+- MLO and Processor colored badges (muted pastels to reduce visual noise)
+- Simplified Kanban cards: borrower name, closing date, loan amount, and ONE contextual flag (VVOE > conditions > lock)
+- "DCM" brand mark in header
+
+### Stats Bar
+- Clickable stat counters: Active (clears filter), Closing within 7/3 days, Closed this month
+- Stats filters work alongside Processor/MLO/Month dropdown filters
+- Visual highlight on active stat + "Clear filter" button
 
 ### Key Business Logic
 - **VVOE:** N/A for Broker loans. Auto-flags "VVOE Needed" when correspondent loan closing ≤7 days and no manual status set
 - **ICD (Initial CD Request):** Flags when closing ≤7 days and InitialCDRequest is null
-- **Broker detection:** Currently broken (TODO) — no Investor or Channel field on Pipeline v2. `isBkr()` returns false for all loans
+- **Broker detection:** Uses `Channel` field from Pipeline v2 (`isBkr(l)` checks `l.Channel === "Broker"`)
 - **DisplayClosingDate:** Pre-computed cascade (Closed → Scheduled → Estimate → null) by Power Automate flow
 - **Lender:** Pre-merged (Investor priority, Lender fallback) by flow
 - **Month filter:** UI has a month selector that filters loans by closing date. Rules:
-  - Overdue active loans (past closing date, not closed) are always included regardless of selected month
-  - Slipped loans from the *previous* calendar month carry into the current month view — but only once the previous month has fully passed (not mid-month)
+  - ALL active (non-Closed) loans whose closing date is before the selected month's start are included as overdue
+  - Closed loans only show in their actual closing month
   - Future months show only loans explicitly closing in that month
+- **My Pipeline toggle:** Filters all views to loans where LoanOfficer or Processor matches the logged-in user's MSAL display name. Persists across view switches, resets on reload.
+- **Last synced:** Shows the most recent `Modified` timestamp from SharePoint data ("Pipeline data as of 10:15 AM"), not when the browser polled
 - **Processor names:** Stored and displayed in short form natively (e.g. "Chris" not "Christopher Smith") — both filter dropdowns and loan counts use the short name directly
 
 ## Known Issues / TODO
 
 ### High Priority
-- [ ] **Broker/Correspondent detection** — Add Channel field to Pipeline v2 list (or Investor field), update isBkr() helper
+- [x] **Broker/Correspondent detection** — Channel field added to Pipeline v2, `isBkr()` uses `l.Channel === "Broker"`
 - [ ] **Verify Conditions list field names** — Confirm LoanNumber, ConditionCategory, Condition, ResponsibleParties, ConditionCode match SharePoint internal names
 - [x] **Write-back confirmed working** — Notes save and VVOE status change work with live SharePoint data (required `odata=verbose` + `__metadata` fix, see SharePoint API Notes above)
 
@@ -108,7 +123,7 @@ The app READS pipeline and conditions data, and WRITES Notes and VVOEStatus back
 2. Test locally by opening `index.html` in browser (auth won't work locally — use mock data for UI changes, or test on GitHub Pages for API changes)
 3. Commit and push to `main`
 4. GitHub Pages auto-deploys in ~60 seconds
-5. Test at https://tjsolomon.github.io/dcm-pipeline/ (use Incognito if auth gets stuck)
+5. Test at https://pipeline.dcmloan.com (use Incognito if auth gets stuck)
 
 ### Auth Troubleshooting
 - "interaction_in_progress" error → Clear session storage in DevTools → Application → Session Storage
