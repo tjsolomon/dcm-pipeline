@@ -808,8 +808,7 @@ function App() {
         <FP opts={["All", ...procs]} val={fProc} onChange={setFProc} counts={loans.map(l => ({...l, Processor: shortProc(l.Processor)}))} field="Processor"/>
         <FP opts={["All", ...mlos]} val={fMLO} onChange={setFMLO} counts={loans} field="LoanOfficer"/>
         <FP opts={["All", ...months]} val={fMonth} onChange={setFMonth} counts={loans.filter(l => l.DisplayClosingDate).map(l => ({...l, closingMonth: getMonthKey(l.DisplayClosingDate)}))} field="closingMonth"/>
-         <button onClick={() => setMyPipeline(!myPipeline)} aria-pressed={myPipeline} title={myPipeline ? "Showing my loans — click to show all" : "Showing all loans — click to show mine"} style={{padding:"6px 14px",border:`1px solid ${myPipeline?"var(--accent)":"var(--border-mid)"}`,borderRadius:20,fontSize:12,cursor:"pointer",fontWeight:600,background:myPipeline?"var(--accent)":"var(--bg-alt)",color:myPipeline?"#fff":"var(--text-sub)",whiteSpace:"nowrap",transition:"all .15s ease"}}>{`My Pipeline: ${myPipeline ? "On" : "Off"}`}</button>
-        <div style={{display:"flex",gap:2,background:"var(--bg-alt)",borderRadius:"var(--radius)",padding:2}}>
+           <button onClick={() => setMyPipeline(!myPipeline)} aria-pressed={myPipeline} aria-label={`My Pipeline: ${myPipeline ? "On" : "Off"}`} title={myPipeline ? "Showing my loans — click to show all" : "Showing all loans — click to show mine"} style={{display:"inline-flex",alignItems:"center",gap:10,padding:"4px 12px",border:`1px solid ${myPipeline?"var(--accent)":"var(--border-mid)"}`,borderRadius:10,fontSize:12,cursor:"pointer",fontWeight:600,background:myPipeline?"var(--accent-bg)":"var(--bg-alt)",color:"var(--text)",whiteSpace:"nowrap",transition:"all .15s ease"}}><span>My Pipeline</span><span aria-hidden="true" style={{width:30,height:18,borderRadius:999,background:myPipeline?"var(--accent)":"#c4c7ce",position:"relative",transition:"background .15s ease"}}><span style={{position:"absolute",top:2,left:2,width:14,height:14,borderRadius:"50%",background:"#fff",boxShadow:"0 1px 2px rgba(0,0,0,.2)",transform:myPipeline?"translateX(12px)":"translateX(0)",transition:"transform .15s ease"}} /></span></button>        <div style={{display:"flex",gap:2,background:"var(--bg-alt)",borderRadius:"var(--radius)",padding:2}}>
           {viewBtn("pipeline", "Pipeline")}
           {viewBtn("calendar", "Calendar")}
           {viewBtn("details", "Details")}
@@ -859,5 +858,6 @@ root.render(<App />);
 </script>
 </body>
 </html>
+
 
 
