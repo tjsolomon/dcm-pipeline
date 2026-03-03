@@ -444,27 +444,29 @@ const DetailPanel = ({loan:l,condMap,onClose:oc,onSaveNotes,onSaveVVOE}) => {
   </>;
 };
 
-// ─── Kanban Card (simplified: name, date, amount, one flag) ──
+// ─── Kanban Card ─────────────────────────────────────────
 const Card = ({loan:l,onClick:oc}) => {
   const urg2=urgency(l.DisplayClosingDate,l.Status);const uc=UC[urg2];
-  const closed=isClosed(l);const conds=l.ConditionsCount||0;
-  const lockUrg=lockUrgency(l.LockExpirationDate);const luc=UC[lockUrg];
-  const vvoe=getEffectiveVVOE(l);
-  // Pick ONE contextual flag — priority: VVOE needed > conditions > lock expiration
-  let flag=null;
-  if(!closed&&vvoe==="VVOE Needed") flag={t:"VVOE Needed",bg:"rgba(220,38,38,0.08)",c:"#dc2626"};
-  else if(!closed&&conds>0) flag={t:`${conds} cond${conds!==1?"s":""}`,bg:"rgba(245,158,11,0.08)",c:"#d97706"};
-  else if(!closed&&l.LockExpirationDate&&lockUrg!=="normal"&&lockUrg!=="none") flag={t:`Lock ${fmt(l.LockExpirationDate)}`,bg:"transparent",c:luc.text};
-  return <div onClick={()=>oc(l)} style={{background:"var(--bg-card)",borderRadius:"var(--radius)",padding:"12px 14px",cursor:"pointer",borderLeft:`3px solid ${uc.border}`,transition:"all .2s ease",boxShadow:"var(--shadow)",opacity:closed?.6:1}} onMouseEnter={e=>{e.currentTarget.style.boxShadow="var(--shadow-hover)";e.currentTarget.style.transform="translateY(-1px)";}} onMouseLeave={e=>{e.currentTarget.style.boxShadow="var(--shadow)";e.currentTarget.style.transform="none";}}>
-    <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:6}}>
-      <div style={{fontSize:13,fontWeight:600,color:"var(--text)",lineHeight:1.3}}>{l.BorrowerLastName}, {l.BorrowerFirstName}</div>
-      <span style={{fontSize:11,fontWeight:600,color:uc.text,whiteSpace:"nowrap",marginLeft:8}}>{l.DisplayClosingDate?fmt(l.DisplayClosingDate):"TBD"}</span>
+  const closed=isClosed(l);const vvoe=getEffectiveVVOE(l);
+  const dueText=l.DisplayClosingDate?fmt(l.DisplayClosingDate):"TBD";
+  const dueColor=urg2==="overdue"||urg2==="urgent"?"#dc2626":"var(--text-sub)";
+  const dueBg=l.DisplayClosingDate?"transparent":"var(--bg-alt)";
+
+  const flags=[];
+  if(isOutsideTitle(l)) flags.push({t:"Outside Title",bg:"rgba(168,85,247,0.08)",c:"#7c3aed",bd:"rgba(168,85,247,0.35)"});
+  if(l.NewConstruction) flags.push({t:"New Const",bg:"rgba(59,130,246,0.08)",c:"#2563eb",bd:"rgba(59,130,246,0.3)"});
+  if(needsCDFlag(l)) flags.push({t:"ICD",bg:"rgba(139,92,246,0.08)",c:"#7c3aed",bd:"rgba(139,92,246,0.3)"});
+  if(!l.IncomeFinalized&&!closed) flags.push({t:"Income TBD",bg:"rgba(245,158,11,0.08)",c:"#d97706",bd:"rgba(245,158,11,0.35)"});
+  if(vvoe&&vvoe!=="N/A") flags.push({t:vvoe,bg:vvoe==="VVOE Complete"?"rgba(34,197,94,0.1)":vvoe==="VVOE Working"?"rgba(245,158,11,0.1)":"rgba(239,68,68,0.1)",c:vvoe==="VVOE Complete"?"#059669":vvoe==="VVOE Working"?"#d97706":"#dc2626",bd:vvoe==="VVOE Complete"?"rgba(34,197,94,0.35)":vvoe==="VVOE Working"?"rgba(245,158,11,0.35)":"rgba(239,68,68,0.3)"});
+
+  return <div onClick={()=>oc(l)} style={{background:"var(--bg-card)",borderRadius:10,padding:"12px 14px 10px",cursor:"pointer",border:"1px solid var(--border)",transition:"all .15s ease",boxShadow:"0 1px 2px rgba(0,0,0,0.05)",opacity:closed?.7:1}} onMouseEnter={e=>{e.currentTarget.style.boxShadow="0 4px 12px rgba(0,0,0,0.08)";e.currentTarget.style.transform="translateY(-1px)";}} onMouseLeave={e=>{e.currentTarget.style.boxShadow="0 1px 2px rgba(0,0,0,0.05)";e.currentTarget.style.transform="none";}}>
+    <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:4,gap:8}}>
+      <div style={{fontSize:14,fontWeight:600,color:"var(--text)",lineHeight:1.25}}>{l.BorrowerLastName}, {l.BorrowerFirstName}</div>
+      <span style={{fontSize:12,fontWeight:closed?500:600,color:dueColor,background:dueBg,padding:l.DisplayClosingDate?0:"3px 8px",borderRadius:l.DisplayClosingDate?0:999,whiteSpace:"nowrap",lineHeight:1.2}}>{dueText}</span>
     </div>
-    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-      
-      <span style={{fontSize:12,fontWeight:500,color:"var(--text-dim)"}}>{fmtCurrency(l.TotalLoanAmount)}</span>
-      {flag&&<span style={{fontSize:10,fontWeight:600,padding:"2px 7px",borderRadius:4,background:flag.bg,color:flag.c}}>{flag.t}</span>}
-    </div>
+    <div style={{fontSize:13,color:"var(--text-sub)",marginBottom:8,fontWeight:500}}>{fmtCurrency(l.TotalLoanAmount)}</div>
+    {flags.length>0&&<div style={{display:"flex",flexWrap:"wrap",gap:4,marginBottom:8}}>{flags.map((f,i)=><span key={`${f.t}-${i}`} style={{fontSize:10,fontWeight:500,padding:"2px 7px",borderRadius:7,background:f.bg,color:f.c,border:`1px solid ${f.bd}`,whiteSpace:"nowrap",lineHeight:1.2}}>{f.t}</span>)}</div>}
+    <div style={{height:2,borderRadius:999,background:uc.border,opacity:.45}}/>
   </div>;
 };
 
@@ -858,6 +860,7 @@ root.render(<App />);
 </script>
 </body>
 </html>
+
 
 
 
