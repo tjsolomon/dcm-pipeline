@@ -230,13 +230,12 @@ const fmtFull = (d) => { if (!d) return "—"; const t = new Date(d); return `${
 const fmtCurrency = (n) => n ? `$${(n/1000).toFixed(0)}K` : "—";
 const fmtCurrencyFull = (n) => n ? `$${n.toLocaleString("en-US")}` : "—";
 const fmtVol = (n) => n >= 1000000 ? `$${(n/1000000).toFixed(2)}M` : `$${(n/1000).toFixed(0)}K`;
-const purposeShort = (p) => { if (p === "No Cash Out Refinance") return "Refi"; if (p === "Cash Out Refinance") return "Cash-Out Refi"; return p || "—"; };
-const getMergedLender = (l) => l.Lender || "—";
+const purposeShort = (p) => { if (p === "No Cash Out Refinance") return "Refi"; if (p === "Cash Out Refinance") return "Cash-Out Refi"; if (p === "Purchase") return "Pur"; return p || "—"; };const getMergedLender = (l) => l.Lender || "—";
 const isOutsideTitle = (l) => l.OutsideTitle || false;
 const isBkr = (l) => l.Channel === "Broker";
 const isClosed = (l) => l.Status === "Closed" || l.Status === "Post Closing";
 const channelLabel = (l) => isBkr(l) ? "Broker" : "Correspondent";
-const loanTypeShort = (t) => { if (!t) return "—"; if (t === "USDA Rural Housing") return "USDA"; return t; };
+const loanTypeShort = (t) => { if (!t) return "—"; if (t === "USDA Rural Housing") return "USDA"; if (t === "Conventional") return "Conf"; return t; };
 const getMonthKey = (d) => { if (!d) return "No Date"; const t=new Date(d); return `${["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][t.getMonth()]} ${t.getFullYear()}`; };
 const getMonthSort = (d) => { if (!d) return "9999-99"; const t=new Date(d); return `${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,"0")}`; };
 const getMonthStart = (monthKey) => { const [mon,yr]=monthKey.split(" "); const idx=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"].indexOf(mon); return new Date(parseInt(yr),idx,1); };
@@ -484,18 +483,23 @@ const DetailsView = ({loans,onCardClick:oc}) => {
   const sortedClosed=useMemo(()=>[...closedLoans].sort((a,b)=>(b.DisplayClosingDate||"").localeCompare(a.DisplayClosingDate||"")),[closedLoans]);
   const doSort=(col)=>{if(sortCol===col)setSortDir(d=>d==="asc"?"desc":"asc");else{setSortCol(col);setSortDir("asc");}};
   const arrow=(col)=>sortCol===col?(sortDir==="asc"?" ↑":" ↓"):"";
-  const hStyle={padding:"8px 6px",textAlign:"left",fontSize:10,fontWeight:600,color:"var(--text-dim)",textTransform:"uppercase",letterSpacing:.4,cursor:"pointer",whiteSpace:"nowrap",userSelect:"none",borderBottom:"1px solid var(--border)"};
+  const hStyle={padding:"8px 6px",textAlign:"left",fontSize:10,fontWeight:600,color:"var(--text-dim)",textTransform:"uppercase",letterSpacing:.4,cursor:"pointer",whiteSpace:"nowrap",userSelect:"none",borderBottom:"1px solid var(--border)",overflow:"hidden",textOverflow:"ellipsis"};
   const hStyleStatic={...hStyle,cursor:"default"};
-  const tStyle={padding:"8px 6px",borderBottom:"1px solid var(--border)",fontSize:12,color:"var(--text)",whiteSpace:"nowrap"};
+  const tStyle={padding:"8px 6px",borderBottom:"1px solid var(--border)",fontSize:12,color:"var(--text)",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"};
+  const colStyles={
+    borrower:{width:"14%",minWidth:180},
+    loanNumber:{width:"9%",minWidth:110},
+    lender:{width:"12%",minWidth:150},
+  };
   const badge=(text,bg,color)=>text?<span key={text} style={{fontSize:10,fontWeight:600,padding:"2px 6px",borderRadius:4,background:bg,color,whiteSpace:"nowrap"}}>{text}</span>:null;
 
   const renderHeaders=()=><tr>
-    <th style={hStyle} onClick={()=>doSort("BorrowerLastName")}>Borrower{arrow("BorrowerLastName")}</th>
-    <th style={hStyle} onClick={()=>doSort("Title")}>Loan #{arrow("Title")}</th>
+     <td style={{...tStyle,...colStyles.borrower,fontWeight:600}} title={`${l.BorrowerLastName}, ${l.BorrowerFirstName}`}>{l.BorrowerLastName}, {l.BorrowerFirstName}</td>
+      <td style={{...tStyle,...colStyles.loanNumber}} title={`#${l.Title}`}>#{l.Title}</td>
     <th style={hStyle} onClick={()=>doSort("Status")}>Status{arrow("Status")}</th>
     <th style={hStyle} onClick={()=>doSort("Processor")}>Processor{arrow("Processor")}</th>
     <th style={hStyle} onClick={()=>doSort("LoanOfficer")}>MLO{arrow("LoanOfficer")}</th>
-    <th style={hStyle} onClick={()=>doSort("Lender")}>Lender{arrow("Lender")}</th>
+    <th style={{...hStyle,...colStyles.lender}} onClick={()=>doSort("Lender")}>Lender{arrow("Lender")}</th>
     <th style={hStyleStatic}>Channel</th>
     <th style={hStyle} onClick={()=>doSort("PurposeType")}>Purpose{arrow("PurposeType")}</th>
     <th style={hStyle} onClick={()=>doSort("LoanType")}>Type{arrow("LoanType")}</th>
@@ -523,14 +527,14 @@ const DetailsView = ({loans,onCardClick:oc}) => {
       <td style={tStyle}><span style={{fontSize:10,fontWeight:600,padding:"2px 7px",borderRadius:4,background:sc2.bg,color:sc2.text}}>{l.Status}</span></td>
       <td style={tStyle}>{shortProc(l.Processor)}</td>
       <td style={tStyle}>{mloAbbr(l.LoanOfficer)}</td>
-      <td style={tStyle}>{getMergedLender(l)}</td>
+      <td style={{...tStyle,...colStyles.lender}} title={getMergedLender(l)}>{getMergedLender(l)}</td>
       <td style={tStyle}>{isBkr(l)?"Broker":"Corres"}</td>
       <td style={tStyle}>{purposeShort(l.PurposeType)}</td>
       <td style={tStyle}>{loanTypeShort(l.LoanType)}</td>
       <td style={tStyle}>{l.LockExpirationDate?<span style={{fontWeight:600,color:(lockUrg2==="overdue"||lockUrg2==="urgent")?"#dc2626":"var(--text)",fontSize:12}}>{fmt(l.LockExpirationDate)}</span>:"—"}</td>
       <td style={tStyle}><span style={{fontWeight:600,color:(urg2==="overdue"||urg2==="urgent")?"#dc2626":"var(--text)",fontSize:12}}>{l.DisplayClosingDate?fmt(l.DisplayClosingDate):"TBD"}</span></td>
       <td style={tStyle}>{l.ConditionsCount>0?<span style={{fontWeight:600}}>{l.ConditionsCount}</span>:closed?"—":"✓"}</td>
-      <td style={tStyle}><div style={{display:"flex",flexWrap:"wrap",gap:3}}>{flags.map(f=>badge(f.t,f.bg,f.c))}</div></td>
+      <td style={{...tStyle,whiteSpace:"nowrap"}}><div style={{display:"flex",flexWrap:"nowrap",gap:3,overflowX:"auto",whiteSpace:"nowrap"}}>{flags.map(f=>badge(f.t,f.bg,f.c))}</div></td>
     </tr>;
   };
 
@@ -858,6 +862,7 @@ root.render(<App />);
 </script>
 </body>
 </html>
+
 
 
 
