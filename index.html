@@ -461,6 +461,7 @@ const Card = ({loan:l,onClick:oc}) => {
       <span style={{fontSize:11,fontWeight:600,color:uc.text,whiteSpace:"nowrap",marginLeft:8}}>{l.DisplayClosingDate?fmt(l.DisplayClosingDate):"TBD"}</span>
     </div>
     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+      
       <span style={{fontSize:12,fontWeight:500,color:"var(--text-dim)"}}>{fmtCurrency(l.TotalLoanAmount)}</span>
       {flag&&<span style={{fontSize:10,fontWeight:600,padding:"2px 7px",borderRadius:4,background:flag.bg,color:flag.c}}>{flag.t}</span>}
     </div>
@@ -483,29 +484,25 @@ const DetailsView = ({loans,onCardClick:oc}) => {
   const sortedClosed=useMemo(()=>[...closedLoans].sort((a,b)=>(b.DisplayClosingDate||"").localeCompare(a.DisplayClosingDate||"")),[closedLoans]);
   const doSort=(col)=>{if(sortCol===col)setSortDir(d=>d==="asc"?"desc":"asc");else{setSortCol(col);setSortDir("asc");}};
   const arrow=(col)=>sortCol===col?(sortDir==="asc"?" ↑":" ↓"):"";
-  const hStyle={padding:"8px 6px",textAlign:"left",fontSize:10,fontWeight:600,color:"var(--text-dim)",textTransform:"uppercase",letterSpacing:.4,cursor:"pointer",whiteSpace:"nowrap",userSelect:"none",borderBottom:"1px solid var(--border)",overflow:"hidden",textOverflow:"ellipsis"};
+  const hStyle={padding:"8px 6px",textAlign:"left",fontSize:10,fontWeight:600,color:"var(--text-dim)",textTransform:"uppercase",letterSpacing:.4,cursor:"pointer",whiteSpace:"nowrap",userSelect:"none",borderBottom:"1px solid var(--border)"};
   const hStyleStatic={...hStyle,cursor:"default"};
-  const tStyle={padding:"8px 6px",borderBottom:"1px solid var(--border)",fontSize:12,color:"var(--text)",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"};
-  const colStyles={
-    borrower:{width:"14%",minWidth:180},
-    loanNumber:{width:"9%",minWidth:110},
-    lender:{width:"12%",minWidth:150},
-  };
+  const tStyle={padding:"8px 6px",borderBottom:"1px solid var(--border)",fontSize:12,color:"var(--text)",whiteSpace:"nowrap"};
   const badge=(text,bg,color)=>text?<span key={text} style={{display:"inline-flex",flex:"0 0 auto",fontSize:10,fontWeight:600,padding:"2px 6px",borderRadius:4,background:bg,color,whiteSpace:"nowrap"}}>{text}</span>:null;
+
   const renderHeaders=()=><tr>
-    <th style={{...hStyle,...colStyles.borrower}} onClick={()=>doSort("BorrowerLastName")}>Borrower{arrow("BorrowerLastName")}</th>
-    <th style={{...hStyle,...colStyles.loanNumber}} onClick={()=>doSort("Title")}>Loan #{arrow("Title")}</th>
+    <th style={hStyle} onClick={()=>doSort("BorrowerLastName")}>Borrower{arrow("BorrowerLastName")}</th>
+    <th style={hStyle} onClick={()=>doSort("Title")}>Loan #{arrow("Title")}</th>
     <th style={hStyle} onClick={()=>doSort("Status")}>Status{arrow("Status")}</th>
     <th style={hStyle} onClick={()=>doSort("Processor")}>Processor{arrow("Processor")}</th>
     <th style={hStyle} onClick={()=>doSort("LoanOfficer")}>MLO{arrow("LoanOfficer")}</th>
-    <th style={{...hStyle,...colStyles.lender}} onClick={()=>doSort("Lender")}>Lender{arrow("Lender")}</th>
+    <th style={hStyle} onClick={()=>doSort("Lender")}>Lender{arrow("Lender")}</th>
     <th style={hStyleStatic}>Channel</th>
     <th style={hStyle} onClick={()=>doSort("PurposeType")}>Purpose{arrow("PurposeType")}</th>
     <th style={hStyle} onClick={()=>doSort("LoanType")}>Type{arrow("LoanType")}</th>
     <th style={hStyle} onClick={()=>doSort("LockExpirationDate")}>Lock Exp{arrow("LockExpirationDate")}</th>
     <th style={hStyle} onClick={()=>doSort("DisplayClosingDate")}>Closing{arrow("DisplayClosingDate")}</th>
     <th style={hStyle} onClick={()=>doSort("ConditionsCount")}>Conds{arrow("ConditionsCount")}</th>
-    <th style={hStyleStatic}>Flags</th>
+    <th style={{...hStyleStatic,width:220,minWidth:220}}>Flags</th>
   </tr>;
 
   const renderRow=(l)=>{
@@ -521,25 +518,25 @@ const DetailsView = ({loans,onCardClick:oc}) => {
     if(vvoe&&vvoe!=="N/A") flags.push({t:vvoe,bg:vvoe==="VVOE Complete"?"rgba(34,197,94,0.08)":vvoe==="VVOE Working"?"rgba(245,158,11,0.08)":"rgba(220,38,38,0.08)",c:vvoe==="VVOE Complete"?"#16a34a":vvoe==="VVOE Working"?"#d97706":"#dc2626"});
     if(l.Notes) flags.push({t:"Notes",bg:"rgba(59,130,246,0.08)",c:"#2563eb"});
     return <tr key={l.Title} onClick={()=>oc(l)} style={{cursor:"pointer"}} onMouseEnter={e=>e.currentTarget.style.background="var(--bg-alt)"} onMouseLeave={e=>e.currentTarget.style.background=""}>
-      <td style={{...tStyle,...colStyles.borrower,fontWeight:600}} title={`${l.BorrowerLastName}, ${l.BorrowerFirstName}`}>{l.BorrowerLastName}, {l.BorrowerFirstName}</td>
-      <td style={{...tStyle,...colStyles.loanNumber}} title={`#${l.Title}`}>#{l.Title}</td>
+      <td style={{...tStyle,fontWeight:600}}>{l.BorrowerLastName}, {l.BorrowerFirstName}</td>
+      <td style={tStyle}>#{l.Title}</td>
       <td style={tStyle}><span style={{fontSize:10,fontWeight:600,padding:"2px 7px",borderRadius:4,background:sc2.bg,color:sc2.text}}>{l.Status}</span></td>
       <td style={tStyle}>{shortProc(l.Processor)}</td>
       <td style={tStyle}>{mloAbbr(l.LoanOfficer)}</td>
-      <td style={{...tStyle,...colStyles.lender}} title={getMergedLender(l)}>{getMergedLender(l)}</td>
+      <td style={tStyle}>{getMergedLender(l)}</td>
       <td style={tStyle}>{isBkr(l)?"Broker":"Corres"}</td>
       <td style={tStyle}>{purposeShort(l.PurposeType)}</td>
       <td style={tStyle}>{loanTypeShort(l.LoanType)}</td>
-      <td style={tStyle}>{l.LockExpirationDate?<span style={{fontWeight:600,color:(lockUrg2==="overdue"||lockUrg2==="urgent")?"#dc2626":"var(--text)",fontSize:12}}>{fmt(l.LockExpirationDate)}</span>:"—"}</td>
-      <td style={tStyle}><span style={{fontWeight:600,color:(urg2==="overdue"||urg2==="urgent")?"#dc2626":"var(--text)",fontSize:12}}>{l.DisplayClosingDate?fmt(l.DisplayClosingDate):"TBD"}</span></td>
+      <td style={tStyle}>{l.LockExpirationDate?<span style={{fontWeight:(lockUrg2==="overdue"||lockUrg2==="urgent")?600:500,color:(lockUrg2==="overdue"||lockUrg2==="urgent")?"#dc2626":"var(--text)",fontSize:12}}>{fmt(l.LockExpirationDate)}</span>:"—"}</td>
+      <td style={tStyle}><span style={{fontWeight:(urg2==="overdue"||urg2==="urgent")?600:500,color:(urg2==="overdue"||urg2==="urgent")?"#dc2626":"var(--text)",fontSize:12}}>{l.DisplayClosingDate?fmt(l.DisplayClosingDate):"TBD"}</span></td>
       <td style={tStyle}>{l.ConditionsCount>0?<span style={{fontWeight:600}}>{l.ConditionsCount}</span>:closed?"—":"✓"}</td>
-      <td style={tStyle}><div style={{display:"flex",flexWrap:"wrap",gap:3}}>{flags.map(f=>badge(f.t,f.bg,f.c))}</div></td>
+      <td style={{...tStyle,whiteSpace:"nowrap",minWidth:220,width:220}}><div style={{display:"flex",flexDirection:"row",alignItems:"center",flexWrap:"nowrap",gap:3,overflowX:"auto",overflowY:"hidden",whiteSpace:"nowrap"}}>{flags.map(f=>badge(f.t,f.bg,f.c))}</div></td>
     </tr>;
   };
 
   return <div style={{padding:"16px 20px",overflowY:"auto",height:"calc(100vh - 145px)"}}>
     <div style={{background:"var(--bg-card)",borderRadius:"var(--radius-lg)",border:"1px solid var(--border)",overflow:"hidden",marginBottom:20,boxShadow:"var(--shadow)"}}>
-      <div><table style={{width:"100%",borderCollapse:"collapse",tableLayout:"fixed"}}><thead>{renderHeaders()}</thead><tbody>{sortedActive.map(renderRow)}</tbody></table>
+      <div style={{overflowX:"auto"}}><table style={{width:"100%",borderCollapse:"collapse",tableLayout:"auto"}}><thead>{renderHeaders()}</thead><tbody>{sortedActive.map(renderRow)}</tbody></table>
         {sortedActive.length===0&&<div style={{textAlign:"center",color:"var(--text-muted)",fontSize:13,padding:32}}>No active loans match current filters</div>}
       </div>
     </div>
@@ -548,7 +545,7 @@ const DetailsView = ({loans,onCardClick:oc}) => {
         <span>Closed This Month ({sortedClosed.length})</span>
       </div>
       <div style={{background:"var(--bg-card)",borderRadius:"var(--radius-lg)",border:"1px solid var(--border)",overflow:"hidden",opacity:.7,boxShadow:"var(--shadow)"}}>
-        <div><table style={{width:"100%",borderCollapse:"collapse",tableLayout:"fixed"}}><thead>{renderHeaders()}</thead><tbody>{sortedClosed.map(renderRow)}</tbody></table></div>
+        <div style={{overflowX:"auto"}}><table style={{width:"100%",borderCollapse:"collapse",tableLayout:"auto"}}><thead>{renderHeaders()}</thead><tbody>{sortedClosed.map(renderRow)}</tbody></table></div>
       </div>
     </>}
   </div>;
@@ -861,6 +858,7 @@ root.render(<App />);
 </script>
 </body>
 </html>
+
 
 
 
