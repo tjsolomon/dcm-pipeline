@@ -808,7 +808,7 @@ function App() {
         <FP opts={["All", ...procs]} val={fProc} onChange={setFProc} counts={loans.map(l => ({...l, Processor: shortProc(l.Processor)}))} field="Processor"/>
         <FP opts={["All", ...mlos]} val={fMLO} onChange={setFMLO} counts={loans} field="LoanOfficer"/>
         <FP opts={["All", ...months]} val={fMonth} onChange={setFMonth} counts={loans.filter(l => l.DisplayClosingDate).map(l => ({...l, closingMonth: getMonthKey(l.DisplayClosingDate)}))} field="closingMonth"/>
-        <button onClick={() => setMyPipeline(!myPipeline)} title={myPipeline ? "Showing my loans — click to show all" : "Show only my loans"} style={{padding:"6px 14px",border:`1px solid ${myPipeline?"var(--accent)":"var(--border)"}`,borderRadius:20,fontSize:12,cursor:"pointer",fontWeight:600,background:myPipeline?"var(--accent)":"transparent",color:myPipeline?"#fff":"var(--text-sub)",whiteSpace:"nowrap",transition:"all .15s ease"}}>My Pipeline</button>
+         <button onClick={() => setMyPipeline(!myPipeline)} aria-pressed={myPipeline} title={myPipeline ? "Showing my loans — click to show all" : "Showing all loans — click to show mine"} style={{padding:"6px 14px",border:`1px solid ${myPipeline?"var(--accent)":"var(--border-mid)"}`,borderRadius:20,fontSize:12,cursor:"pointer",fontWeight:600,background:myPipeline?"var(--accent)":"var(--bg-alt)",color:myPipeline?"#fff":"var(--text-sub)",whiteSpace:"nowrap",transition:"all .15s ease"}}>{`My Pipeline: ${myPipeline ? "On" : "Off"}`}</button>
         <div style={{display:"flex",gap:2,background:"var(--bg-alt)",borderRadius:"var(--radius)",padding:2}}>
           {viewBtn("pipeline", "Pipeline")}
           {viewBtn("calendar", "Calendar")}
@@ -859,4 +859,5 @@ root.render(<App />);
 </script>
 </body>
 </html>
+
 
