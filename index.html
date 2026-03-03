@@ -621,12 +621,12 @@ const CalendarView = ({loans,onCardClick:oc}) => {
 const FP = ({opts,val,onChange:oc2,counts,field,labelFn}) => {
   const [open,setOpen]=useState(false);const ref=useRef(null);
   useEffect(()=>{const h=e=>{if(ref.current&&!ref.current.contains(e.target))setOpen(false);};document.addEventListener("mousedown",h);return()=>document.removeEventListener("mousedown",h);},[]);
-  const dispVal=val==="All"?`All ${field==="Processor"?"Processors":field==="LoanOfficer"?"MLOs":"Months"}`:(labelFn?labelFn(val):val);
+  const dispVal=val==="All"?(field==="Processor"?"Processor":field==="LoanOfficer"?"MLO":"Month"):(labelFn?labelFn(val):val);
   return <div ref={ref} style={{position:"relative"}}>
     <button onClick={()=>setOpen(!open)} style={{padding:"6px 14px",border:`1px solid ${val!=="All"?"var(--accent)":"var(--border)"}`,borderRadius:20,fontSize:12,cursor:"pointer",display:"flex",alignItems:"center",gap:4,background:val!=="All"?"var(--accent)":"transparent",color:val!=="All"?"#fff":"var(--text-sub)",whiteSpace:"nowrap",fontWeight:500,transition:"all .15s ease"}}>{dispVal} ▾</button>
     {open&&<div style={{position:"absolute",top:"100%",left:0,marginTop:4,background:"var(--bg-card)",border:"1px solid var(--border)",borderRadius:"var(--radius)",boxShadow:"var(--shadow-lg)",zIndex:50,minWidth:200,maxHeight:280,overflowY:"auto",padding:4}}>
       {opts.map(opt=>{const c=opt==="All"?counts.length:counts.filter(l=>l[field]===opt).length;const v=opt==="All"?counts.reduce((s,l)=>s+(l.TotalLoanAmount||0),0):counts.filter(l=>l[field]===opt).reduce((s,l)=>s+(l.TotalLoanAmount||0),0);
-        const optLabel=opt==="All"?(field==="Processor"?"All Processors":field==="LoanOfficer"?"All MLOs":"All Months"):(labelFn?labelFn(opt):opt);
+        const optLabel=opt==="All"?(field==="Processor"?"Processor":field==="LoanOfficer"?"MLO":"Month"):(labelFn?labelFn(opt):opt);
         return <button key={opt} onClick={()=>{oc2(opt);setOpen(false);}} style={{display:"flex",justifyContent:"space-between",width:"100%",padding:"8px 12px",border:"none",background:opt===val?"var(--accent-bg)":"transparent",cursor:"pointer",fontSize:12,color:"var(--text)",textAlign:"left",gap:8,borderRadius:6,fontWeight:opt===val?600:400}} onMouseEnter={e=>{if(opt!==val)e.target.style.background="var(--bg-hover)";}} onMouseLeave={e=>{if(opt!==val)e.target.style.background="transparent";}}><span>{optLabel}</span><span style={{color:"var(--text-dim)",whiteSpace:"nowrap",fontSize:11}}>{c} · {fmtVol(v)}</span></button>;
       })}
     </div>}
@@ -859,3 +859,4 @@ root.render(<App />);
 </script>
 </body>
 </html>
+
