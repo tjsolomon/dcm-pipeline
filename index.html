@@ -494,8 +494,8 @@ const DetailsView = ({loans,onCardClick:oc}) => {
   const badge=(text,bg,color)=>text?<span key={text} style={{fontSize:10,fontWeight:600,padding:"2px 6px",borderRadius:4,background:bg,color,whiteSpace:"nowrap"}}>{text}</span>:null;
 
   const renderHeaders=()=><tr>
-     <td style={{...tStyle,...colStyles.borrower,fontWeight:600}} title={`${l.BorrowerLastName}, ${l.BorrowerFirstName}`}>{l.BorrowerLastName}, {l.BorrowerFirstName}</td>
-      <td style={{...tStyle,...colStyles.loanNumber}} title={`#${l.Title}`}>#{l.Title}</td>
+    <th style={{...hStyle,...colStyles.borrower}} onClick={()=>doSort("BorrowerLastName")}>Borrower{arrow("BorrowerLastName")}</th>
+    <th style={{...hStyle,...colStyles.loanNumber}} onClick={()=>doSort("Title")}>Loan #{arrow("Title")}</th>
     <th style={hStyle} onClick={()=>doSort("Status")}>Status{arrow("Status")}</th>
     <th style={hStyle} onClick={()=>doSort("Processor")}>Processor{arrow("Processor")}</th>
     <th style={hStyle} onClick={()=>doSort("LoanOfficer")}>MLO{arrow("LoanOfficer")}</th>
@@ -522,8 +522,8 @@ const DetailsView = ({loans,onCardClick:oc}) => {
     if(vvoe&&vvoe!=="N/A") flags.push({t:vvoe,bg:vvoe==="VVOE Complete"?"rgba(34,197,94,0.08)":vvoe==="VVOE Working"?"rgba(245,158,11,0.08)":"rgba(220,38,38,0.08)",c:vvoe==="VVOE Complete"?"#16a34a":vvoe==="VVOE Working"?"#d97706":"#dc2626"});
     if(l.Notes) flags.push({t:"Notes",bg:"rgba(59,130,246,0.08)",c:"#2563eb"});
     return <tr key={l.Title} onClick={()=>oc(l)} style={{cursor:"pointer"}} onMouseEnter={e=>e.currentTarget.style.background="var(--bg-alt)"} onMouseLeave={e=>e.currentTarget.style.background=""}>
-      <td style={{...tStyle,fontWeight:600}}>{l.BorrowerLastName}, {l.BorrowerFirstName}</td>
-      <td style={tStyle}>#{l.Title}</td>
+      <td style={{...tStyle,...colStyles.borrower,fontWeight:600}} title={`${l.BorrowerLastName}, ${l.BorrowerFirstName}`}>{l.BorrowerLastName}, {l.BorrowerFirstName}</td>
+      <td style={{...tStyle,...colStyles.loanNumber}} title={`#${l.Title}`}>#{l.Title}</td>
       <td style={tStyle}><span style={{fontSize:10,fontWeight:600,padding:"2px 7px",borderRadius:4,background:sc2.bg,color:sc2.text}}>{l.Status}</span></td>
       <td style={tStyle}>{shortProc(l.Processor)}</td>
       <td style={tStyle}>{mloAbbr(l.LoanOfficer)}</td>
@@ -534,7 +534,7 @@ const DetailsView = ({loans,onCardClick:oc}) => {
       <td style={tStyle}>{l.LockExpirationDate?<span style={{fontWeight:600,color:(lockUrg2==="overdue"||lockUrg2==="urgent")?"#dc2626":"var(--text)",fontSize:12}}>{fmt(l.LockExpirationDate)}</span>:"—"}</td>
       <td style={tStyle}><span style={{fontWeight:600,color:(urg2==="overdue"||urg2==="urgent")?"#dc2626":"var(--text)",fontSize:12}}>{l.DisplayClosingDate?fmt(l.DisplayClosingDate):"TBD"}</span></td>
       <td style={tStyle}>{l.ConditionsCount>0?<span style={{fontWeight:600}}>{l.ConditionsCount}</span>:closed?"—":"✓"}</td>
-      <td style={{...tStyle,whiteSpace:"nowrap"}}><div style={{display:"flex",flexWrap:"nowrap",gap:3,overflowX:"auto",whiteSpace:"nowrap"}}>{flags.map(f=>badge(f.t,f.bg,f.c))}</div></td>
+      <td style={tStyle}><div style={{display:"flex",flexWrap:"wrap",gap:3}}>{flags.map(f=>badge(f.t,f.bg,f.c))}</div></td>
     </tr>;
   };
 
@@ -862,6 +862,7 @@ root.render(<App />);
 </script>
 </body>
 </html>
+
 
 
 
