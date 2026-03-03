@@ -491,8 +491,7 @@ const DetailsView = ({loans,onCardClick:oc}) => {
     loanNumber:{width:"9%",minWidth:110},
     lender:{width:"12%",minWidth:150},
   };
-  const badge=(text,bg,color)=>text?<span key={text} style={{fontSize:10,fontWeight:600,padding:"2px 6px",borderRadius:4,background:bg,color,whiteSpace:"nowrap"}}>{text}</span>:null;
-
+  const badge=(text,bg,color)=>text?<span key={text} style={{display:"inline-flex",flex:"0 0 auto",fontSize:10,fontWeight:600,padding:"2px 6px",borderRadius:4,background:bg,color,whiteSpace:"nowrap"}}>{text}</span>:null;
   const renderHeaders=()=><tr>
     <th style={{...hStyle,...colStyles.borrower}} onClick={()=>doSort("BorrowerLastName")}>Borrower{arrow("BorrowerLastName")}</th>
     <th style={{...hStyle,...colStyles.loanNumber}} onClick={()=>doSort("Title")}>Loan #{arrow("Title")}</th>
@@ -862,6 +861,7 @@ root.render(<App />);
 </script>
 </body>
 </html>
+
 
 
 
