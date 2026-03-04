@@ -776,11 +776,12 @@
       const [view, setView] = useState("pipeline");
       const [myPipeline, setMyPipeline] = useState(false);
       const [statFilter, setStatFilter] = useState(null); // null | "active" | "soon" | "urgent" | "closed"
-      const [darkMode, setDarkMode] = useState(false);
+      const [darkMode, setDarkMode] = useState(() => { const saved = localStorage.getItem('dcm-dark-mode'); return saved === 'true'; });
 
-      // Apply dark mode to document root
+      // Apply dark mode to document root and persist preference
       useEffect(() => {
         document.documentElement.setAttribute('data-dark', darkMode);
+        localStorage.setItem('dcm-dark-mode', darkMode);
       }, [darkMode]);
 
       // Escape key closes detail panel
