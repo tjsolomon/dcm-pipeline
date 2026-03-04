@@ -61,7 +61,7 @@ The app READS pipeline and conditions data, and WRITES Notes and VVOEStatus back
 
 ### Three Views
 1. **Pipeline** — Kanban board, 6 status columns (Processing → Closed), sorted by closing date within columns
-2. **Calendar** — Month grid (Sun-Sat, all 7 days), federal holidays highlighted, loans shown on closing dates. Weekends shown with muted styling.
+2. **Calendar** — Month grid (Sun-Sat, all 7 days), federal holidays highlighted, loans shown on closing dates. Weekends shown with distinct dark styling and federal holidays are strongly highlighted.
 3. **Details** — Full worksheet table with sortable columns, active loans + separate "Closed This Month" section
 
 ### Detail Panel (slide-out on card click)
