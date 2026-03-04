@@ -230,13 +230,12 @@ const fmtFull = (d) => { if (!d) return "—"; const t = new Date(d); return `${
 const fmtCurrency = (n) => n ? `$${(n/1000).toFixed(0)}K` : "—";
 const fmtCurrencyFull = (n) => n ? `$${n.toLocaleString("en-US")}` : "—";
 const fmtVol = (n) => n >= 1000000 ? `$${(n/1000000).toFixed(2)}M` : `$${(n/1000).toFixed(0)}K`;
-const purposeShort = (p) => p === "Refinance" ? "Refi" : p === "Purchase" ? "Pur" : (p||"—");
-const getMergedLender = (l) => l.Lender || "—";
+const purposeShort = (p) => { if (p === "No Cash Out Refinance") return "Refi"; if (p === "Cash Out Refinance") return "Cash-Out Refi"; if (p === "Purchase") return "Pur"; return p || "—"; };const getMergedLender = (l) => l.Lender || "—";
 const isOutsideTitle = (l) => l.OutsideTitle || false;
 const isBkr = (l) => l.Channel === "Broker";
 const isClosed = (l) => l.Status === "Closed" || l.Status === "Post Closing";
 const channelLabel = (l) => isBkr(l) ? "Broker" : "Correspondent";
-const loanTypeShort = (t) => { if (!t) return "—"; if (t==="Conventional") return "Conf"; const m={"FHA":"FHA","FHA Streamline":"FHA","VA":"VA","USDA":"USDA","Jumbo":"Jumbo","NonQM":"NonQM"}; return m[t]||t; };
+const loanTypeShort = (t) => { if (!t) return "—"; if (t === "USDA Rural Housing") return "USDA"; if (t === "Conventional") return "Conf"; return t; };
 const getMonthKey = (d) => { if (!d) return "No Date"; const t=new Date(d); return `${["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][t.getMonth()]} ${t.getFullYear()}`; };
 const getMonthSort = (d) => { if (!d) return "9999-99"; const t=new Date(d); return `${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,"0")}`; };
 const getMonthStart = (monthKey) => { const [mon,yr]=monthKey.split(" "); const idx=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"].indexOf(mon); return new Date(parseInt(yr),idx,1); };
@@ -399,7 +398,7 @@ const DetailPanel = ({loan:l,condMap,onClose:oc,onSaveNotes,onSaveVVOE}) => {
       <div style={{padding:"20px 24px",background:`linear-gradient(135deg,${sc.border},${sc.text})`,color:"#fff",position:"relative",flexShrink:0}}>
         <button onClick={oc} style={{position:"absolute",top:12,right:16,background:"rgba(255,255,255,0.15)",border:"none",color:"#fff",width:28,height:28,borderRadius:6,fontSize:14,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",transition:"all .15s ease",backdropFilter:"blur(4px)"}}>✕</button>
         <div style={{fontSize:20,fontWeight:700,marginBottom:4,letterSpacing:-.3}}>{l.BorrowerLastName}, {l.BorrowerFirstName}</div>
-        <div style={{fontSize:13,opacity:.85}}>#{l.Title} · {l.LoanType} {l.PurposeType} · {fmtCurrencyFull(l.TotalLoanAmount)}</div>
+        <div style={{fontSize:13,opacity:.85}}>#{l.Title} · {loanTypeShort(l.LoanType)} {purposeShort(l.PurposeType)} · {fmtCurrencyFull(l.TotalLoanAmount)}</div>
         <div style={{display:"flex",gap:6,marginTop:12,flexWrap:"wrap"}}>
           <span style={{padding:"4px 10px",borderRadius:20,fontSize:11,fontWeight:600,background:"rgba(255,255,255,0.2)",color:"#fff"}}>{l.Status}</span>
           <span style={{padding:"4px 10px",borderRadius:20,fontSize:11,fontWeight:600,background:"rgba(255,255,255,0.15)",color:"#fff"}}>Close: {l.DisplayClosingDate?fmtFull(l.DisplayClosingDate):"TBD"}</span>
@@ -414,7 +413,7 @@ const DetailPanel = ({loan:l,condMap,onClose:oc,onSaveNotes,onSaveVVOE}) => {
           <Ce l="Lock Expires" v={l.LockExpirationDate?fmtFull(l.LockExpirationDate):"—"}/>
           <Ce l="Lender" v={getMergedLender(l)}/>
           <Ce l="Channel" v={channelLabel(l)}/>
-          <Ce l="Loan Type" v={`${l.LoanType} · ${l.OccupancyType}`}/>
+          <Ce l="Loan Type" v={`${loanTypeShort(l.LoanType)} · ${l.OccupancyType}`}/>
           <Ce l="Loan Amount" v={fmtCurrencyFull(l.TotalLoanAmount)}/>
           <Ce l="MLO" v={l.LoanOfficer}/>
           <Ce l="Processor" v={l.Processor}/>
@@ -445,26 +444,29 @@ const DetailPanel = ({loan:l,condMap,onClose:oc,onSaveNotes,onSaveVVOE}) => {
   </>;
 };
 
-// ─── Kanban Card (simplified: name, date, amount, one flag) ──
+// ─── Kanban Card ─────────────────────────────────────────
 const Card = ({loan:l,onClick:oc}) => {
   const urg2=urgency(l.DisplayClosingDate,l.Status);const uc=UC[urg2];
-  const closed=isClosed(l);const conds=l.ConditionsCount||0;
-  const lockUrg=lockUrgency(l.LockExpirationDate);const luc=UC[lockUrg];
-  const vvoe=getEffectiveVVOE(l);
-  // Pick ONE contextual flag — priority: VVOE needed > conditions > lock expiration
-  let flag=null;
-  if(!closed&&vvoe==="VVOE Needed") flag={t:"VVOE Needed",bg:"rgba(220,38,38,0.08)",c:"#dc2626"};
-  else if(!closed&&conds>0) flag={t:`${conds} cond${conds!==1?"s":""}`,bg:"rgba(245,158,11,0.08)",c:"#d97706"};
-  else if(!closed&&l.LockExpirationDate&&lockUrg!=="normal"&&lockUrg!=="none") flag={t:`Lock ${fmt(l.LockExpirationDate)}`,bg:"transparent",c:luc.text};
-  return <div onClick={()=>oc(l)} style={{background:"var(--bg-card)",borderRadius:"var(--radius)",padding:"12px 14px",cursor:"pointer",borderLeft:`3px solid ${uc.border}`,transition:"all .2s ease",boxShadow:"var(--shadow)",opacity:closed?.6:1}} onMouseEnter={e=>{e.currentTarget.style.boxShadow="var(--shadow-hover)";e.currentTarget.style.transform="translateY(-1px)";}} onMouseLeave={e=>{e.currentTarget.style.boxShadow="var(--shadow)";e.currentTarget.style.transform="none";}}>
-    <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:6}}>
-      <div style={{fontSize:13,fontWeight:600,color:"var(--text)",lineHeight:1.3}}>{l.BorrowerLastName}, {l.BorrowerFirstName}</div>
-      <span style={{fontSize:11,fontWeight:600,color:uc.text,whiteSpace:"nowrap",marginLeft:8}}>{l.DisplayClosingDate?fmt(l.DisplayClosingDate):"TBD"}</span>
+  const closed=isClosed(l);const vvoe=getEffectiveVVOE(l);
+  const dueText=l.DisplayClosingDate?fmt(l.DisplayClosingDate):"TBD";
+  const dueColor=urg2==="overdue"||urg2==="urgent"?"#dc2626":"var(--text-sub)";
+  const dueBg=l.DisplayClosingDate?"transparent":"var(--bg-alt)";
+
+  const flags=[];
+  if(isOutsideTitle(l)) flags.push({t:"Outside Title",bg:"rgba(168,85,247,0.08)",c:"#7c3aed",bd:"rgba(168,85,247,0.35)"});
+  if(l.NewConstruction) flags.push({t:"New Const",bg:"rgba(59,130,246,0.08)",c:"#2563eb",bd:"rgba(59,130,246,0.3)"});
+  if(needsCDFlag(l)) flags.push({t:"ICD",bg:"rgba(139,92,246,0.08)",c:"#7c3aed",bd:"rgba(139,92,246,0.3)"});
+  if(!l.IncomeFinalized&&!closed) flags.push({t:"Income TBD",bg:"rgba(245,158,11,0.08)",c:"#d97706",bd:"rgba(245,158,11,0.35)"});
+  if(vvoe&&vvoe!=="N/A") flags.push({t:vvoe,bg:vvoe==="VVOE Complete"?"rgba(34,197,94,0.1)":vvoe==="VVOE Working"?"rgba(245,158,11,0.1)":"rgba(239,68,68,0.1)",c:vvoe==="VVOE Complete"?"#059669":vvoe==="VVOE Working"?"#d97706":"#dc2626",bd:vvoe==="VVOE Complete"?"rgba(34,197,94,0.35)":vvoe==="VVOE Working"?"rgba(245,158,11,0.35)":"rgba(239,68,68,0.3)"});
+
+  return <div onClick={()=>oc(l)} style={{background:"var(--bg-card)",borderRadius:10,padding:"12px 14px 10px",cursor:"pointer",border:"1px solid var(--border)",transition:"all .15s ease",boxShadow:"0 1px 2px rgba(0,0,0,0.05)",opacity:closed?.7:1}} onMouseEnter={e=>{e.currentTarget.style.boxShadow="0 4px 12px rgba(0,0,0,0.08)";e.currentTarget.style.transform="translateY(-1px)";}} onMouseLeave={e=>{e.currentTarget.style.boxShadow="0 1px 2px rgba(0,0,0,0.05)";e.currentTarget.style.transform="none";}}>
+    <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:4,gap:8}}>
+      <div style={{fontSize:14,fontWeight:600,color:"var(--text)",lineHeight:1.25}}>{l.BorrowerLastName}, {l.BorrowerFirstName}</div>
+      <span style={{fontSize:12,fontWeight:closed?500:600,color:dueColor,background:dueBg,padding:l.DisplayClosingDate?0:"3px 8px",borderRadius:l.DisplayClosingDate?0:999,whiteSpace:"nowrap",lineHeight:1.2}}>{dueText}</span>
     </div>
-    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-      <span style={{fontSize:12,fontWeight:500,color:"var(--text-dim)"}}>{fmtCurrency(l.TotalLoanAmount)}</span>
-      {flag&&<span style={{fontSize:10,fontWeight:600,padding:"2px 7px",borderRadius:4,background:flag.bg,color:flag.c}}>{flag.t}</span>}
-    </div>
+    <div style={{fontSize:13,color:"var(--text-sub)",marginBottom:8,fontWeight:500}}>{fmtCurrency(l.TotalLoanAmount)}</div>
+    {flags.length>0&&<div style={{display:"flex",flexWrap:"wrap",gap:4,marginBottom:8}}>{flags.map((f,i)=><span key={`${f.t}-${i}`} style={{fontSize:10,fontWeight:500,padding:"2px 7px",borderRadius:7,background:f.bg,color:f.c,border:`1px solid ${f.bd}`,whiteSpace:"nowrap",lineHeight:1.2}}>{f.t}</span>)}</div>}
+    <div style={{height:2,borderRadius:999,background:uc.border,opacity:.45}}/>
   </div>;
 };
 
@@ -487,7 +489,7 @@ const DetailsView = ({loans,onCardClick:oc}) => {
   const hStyle={padding:"8px 6px",textAlign:"left",fontSize:10,fontWeight:600,color:"var(--text-dim)",textTransform:"uppercase",letterSpacing:.4,cursor:"pointer",whiteSpace:"nowrap",userSelect:"none",borderBottom:"1px solid var(--border)"};
   const hStyleStatic={...hStyle,cursor:"default"};
   const tStyle={padding:"8px 6px",borderBottom:"1px solid var(--border)",fontSize:12,color:"var(--text)",whiteSpace:"nowrap"};
-  const badge=(text,bg,color)=>text?<span key={text} style={{fontSize:10,fontWeight:600,padding:"2px 6px",borderRadius:4,background:bg,color,whiteSpace:"nowrap"}}>{text}</span>:null;
+  const badge=(text,bg,color)=>text?<span key={text} style={{display:"inline-flex",flex:"0 0 auto",fontSize:10,fontWeight:600,padding:"2px 6px",borderRadius:4,background:bg,color,whiteSpace:"nowrap"}}>{text}</span>:null;
 
   const renderHeaders=()=><tr>
     <th style={hStyle} onClick={()=>doSort("BorrowerLastName")}>Borrower{arrow("BorrowerLastName")}</th>
@@ -502,7 +504,7 @@ const DetailsView = ({loans,onCardClick:oc}) => {
     <th style={hStyle} onClick={()=>doSort("LockExpirationDate")}>Lock Exp{arrow("LockExpirationDate")}</th>
     <th style={hStyle} onClick={()=>doSort("DisplayClosingDate")}>Closing{arrow("DisplayClosingDate")}</th>
     <th style={hStyle} onClick={()=>doSort("ConditionsCount")}>Conds{arrow("ConditionsCount")}</th>
-    <th style={hStyleStatic}>Flags</th>
+    <th style={{...hStyleStatic,width:220,minWidth:220}}>Flags</th>
   </tr>;
 
   const renderRow=(l)=>{
@@ -525,18 +527,18 @@ const DetailsView = ({loans,onCardClick:oc}) => {
       <td style={tStyle}>{mloAbbr(l.LoanOfficer)}</td>
       <td style={tStyle}>{getMergedLender(l)}</td>
       <td style={tStyle}>{isBkr(l)?"Broker":"Corres"}</td>
-      <td style={tStyle}>{l.PurposeType || "—"}</td>
-      <td style={tStyle}>{l.LoanType || "—"}</td>
-      <td style={tStyle}>{l.LockExpirationDate?<span style={{fontWeight:600,color:(lockUrg2==="overdue"||lockUrg2==="urgent")?"#dc2626":"var(--text)",fontSize:12}}>{fmt(l.LockExpirationDate)}</span>:"—"}</td>
-      <td style={tStyle}><span style={{fontWeight:600,color:(urg2==="overdue"||urg2==="urgent")?"#dc2626":"var(--text)",fontSize:12}}>{l.DisplayClosingDate?fmt(l.DisplayClosingDate):"TBD"}</span></td>
+      <td style={tStyle}>{purposeShort(l.PurposeType)}</td>
+      <td style={tStyle}>{loanTypeShort(l.LoanType)}</td>
+      <td style={tStyle}>{l.LockExpirationDate?<span style={{fontWeight:(lockUrg2==="overdue"||lockUrg2==="urgent")?600:500,color:(lockUrg2==="overdue"||lockUrg2==="urgent")?"#dc2626":"var(--text)",fontSize:12}}>{fmt(l.LockExpirationDate)}</span>:"—"}</td>
+      <td style={tStyle}><span style={{fontWeight:(urg2==="overdue"||urg2==="urgent")?600:500,color:(urg2==="overdue"||urg2==="urgent")?"#dc2626":"var(--text)",fontSize:12}}>{l.DisplayClosingDate?fmt(l.DisplayClosingDate):"TBD"}</span></td>
       <td style={tStyle}>{l.ConditionsCount>0?<span style={{fontWeight:600}}>{l.ConditionsCount}</span>:closed?"—":"✓"}</td>
-      <td style={tStyle}><div style={{display:"flex",flexWrap:"wrap",gap:3}}>{flags.map(f=>badge(f.t,f.bg,f.c))}</div></td>
+      <td style={{...tStyle,whiteSpace:"nowrap",minWidth:220,width:220}}><div style={{display:"flex",flexDirection:"row",alignItems:"center",flexWrap:"nowrap",gap:3,overflowX:"auto",overflowY:"hidden",whiteSpace:"nowrap"}}>{flags.map(f=>badge(f.t,f.bg,f.c))}</div></td>
     </tr>;
   };
 
   return <div style={{padding:"16px 20px",overflowY:"auto",height:"calc(100vh - 145px)"}}>
     <div style={{background:"var(--bg-card)",borderRadius:"var(--radius-lg)",border:"1px solid var(--border)",overflow:"hidden",marginBottom:20,boxShadow:"var(--shadow)"}}>
-      <div><table style={{width:"100%",borderCollapse:"collapse",tableLayout:"fixed"}}><thead>{renderHeaders()}</thead><tbody>{sortedActive.map(renderRow)}</tbody></table>
+      <div style={{overflowX:"auto"}}><table style={{width:"100%",borderCollapse:"collapse",tableLayout:"auto"}}><thead>{renderHeaders()}</thead><tbody>{sortedActive.map(renderRow)}</tbody></table>
         {sortedActive.length===0&&<div style={{textAlign:"center",color:"var(--text-muted)",fontSize:13,padding:32}}>No active loans match current filters</div>}
       </div>
     </div>
@@ -545,7 +547,7 @@ const DetailsView = ({loans,onCardClick:oc}) => {
         <span>Closed This Month ({sortedClosed.length})</span>
       </div>
       <div style={{background:"var(--bg-card)",borderRadius:"var(--radius-lg)",border:"1px solid var(--border)",overflow:"hidden",opacity:.7,boxShadow:"var(--shadow)"}}>
-        <div><table style={{width:"100%",borderCollapse:"collapse",tableLayout:"fixed"}}><thead>{renderHeaders()}</thead><tbody>{sortedClosed.map(renderRow)}</tbody></table></div>
+        <div style={{overflowX:"auto"}}><table style={{width:"100%",borderCollapse:"collapse",tableLayout:"auto"}}><thead>{renderHeaders()}</thead><tbody>{sortedClosed.map(renderRow)}</tbody></table></div>
       </div>
     </>}
   </div>;
@@ -621,12 +623,12 @@ const CalendarView = ({loans,onCardClick:oc}) => {
 const FP = ({opts,val,onChange:oc2,counts,field,labelFn}) => {
   const [open,setOpen]=useState(false);const ref=useRef(null);
   useEffect(()=>{const h=e=>{if(ref.current&&!ref.current.contains(e.target))setOpen(false);};document.addEventListener("mousedown",h);return()=>document.removeEventListener("mousedown",h);},[]);
-  const dispVal=val==="All"?`All ${field==="Processor"?"Processors":field==="LoanOfficer"?"MLOs":"Months"}`:(labelFn?labelFn(val):val);
+  const dispVal=val==="All"?(field==="Processor"?"Processor":field==="LoanOfficer"?"MLO":"Month"):(labelFn?labelFn(val):val);
   return <div ref={ref} style={{position:"relative"}}>
     <button onClick={()=>setOpen(!open)} style={{padding:"6px 14px",border:`1px solid ${val!=="All"?"var(--accent)":"var(--border)"}`,borderRadius:20,fontSize:12,cursor:"pointer",display:"flex",alignItems:"center",gap:4,background:val!=="All"?"var(--accent)":"transparent",color:val!=="All"?"#fff":"var(--text-sub)",whiteSpace:"nowrap",fontWeight:500,transition:"all .15s ease"}}>{dispVal} ▾</button>
     {open&&<div style={{position:"absolute",top:"100%",left:0,marginTop:4,background:"var(--bg-card)",border:"1px solid var(--border)",borderRadius:"var(--radius)",boxShadow:"var(--shadow-lg)",zIndex:50,minWidth:200,maxHeight:280,overflowY:"auto",padding:4}}>
       {opts.map(opt=>{const c=opt==="All"?counts.length:counts.filter(l=>l[field]===opt).length;const v=opt==="All"?counts.reduce((s,l)=>s+(l.TotalLoanAmount||0),0):counts.filter(l=>l[field]===opt).reduce((s,l)=>s+(l.TotalLoanAmount||0),0);
-        const optLabel=opt==="All"?(field==="Processor"?"All Processors":field==="LoanOfficer"?"All MLOs":"All Months"):(labelFn?labelFn(opt):opt);
+        const optLabel=opt==="All"?(field==="Processor"?"Processor":field==="LoanOfficer"?"MLO":"Month"):(labelFn?labelFn(opt):opt);
         return <button key={opt} onClick={()=>{oc2(opt);setOpen(false);}} style={{display:"flex",justifyContent:"space-between",width:"100%",padding:"8px 12px",border:"none",background:opt===val?"var(--accent-bg)":"transparent",cursor:"pointer",fontSize:12,color:"var(--text)",textAlign:"left",gap:8,borderRadius:6,fontWeight:opt===val?600:400}} onMouseEnter={e=>{if(opt!==val)e.target.style.background="var(--bg-hover)";}} onMouseLeave={e=>{if(opt!==val)e.target.style.background="transparent";}}><span>{optLabel}</span><span style={{color:"var(--text-dim)",whiteSpace:"nowrap",fontSize:11}}>{c} · {fmtVol(v)}</span></button>;
       })}
     </div>}
@@ -693,7 +695,7 @@ function App() {
       const data = await fetchPipelineData();
       setLoans(data.loans);
       setCondMap(data.condMap);
-      setLastSync(new Date());
+      setLastSync(data.lastModified);
       setError(null);
     } catch (e) {
       console.error("Data load error:", e);
@@ -760,7 +762,7 @@ function App() {
       const inMonth = loanDate && getMonthKey(l.DisplayClosingDate) === fMonth;
       const monthStart = getMonthStart(fMonth);
       // Active loans with closing date before selected month are overdue — always include
-      const isOverdue = !isClosed(l) && loanDate && loanDate < monthStart;
+      const isOverdue = l.Status !== "Closed" && loanDate && loanDate < monthStart;
       if (!inMonth && !isOverdue) return false;
     }
     if (search) { const s = search.toLowerCase(); if (!`${l.BorrowerFirstName} ${l.BorrowerLastName} ${l.Title} ${l.LoanOfficer} ${l.Processor}`.toLowerCase().includes(s)) return false; }
@@ -808,8 +810,7 @@ function App() {
         <FP opts={["All", ...procs]} val={fProc} onChange={setFProc} counts={loans.map(l => ({...l, Processor: shortProc(l.Processor)}))} field="Processor"/>
         <FP opts={["All", ...mlos]} val={fMLO} onChange={setFMLO} counts={loans} field="LoanOfficer"/>
         <FP opts={["All", ...months]} val={fMonth} onChange={setFMonth} counts={loans.filter(l => l.DisplayClosingDate).map(l => ({...l, closingMonth: getMonthKey(l.DisplayClosingDate)}))} field="closingMonth"/>
-        <button onClick={() => setMyPipeline(!myPipeline)} title={myPipeline ? "Showing my loans — click to show all" : "Show only my loans"} style={{padding:"6px 14px",border:`1px solid ${myPipeline?"var(--accent)":"var(--border)"}`,borderRadius:20,fontSize:12,cursor:"pointer",fontWeight:600,background:myPipeline?"var(--accent)":"transparent",color:myPipeline?"#fff":"var(--text-sub)",whiteSpace:"nowrap",transition:"all .15s ease"}}>My Pipeline</button>
-        <div style={{display:"flex",gap:2,background:"var(--bg-alt)",borderRadius:"var(--radius)",padding:2}}>
+           <button onClick={() => setMyPipeline(!myPipeline)} aria-pressed={myPipeline} aria-label={`My Pipeline: ${myPipeline ? "On" : "Off"}`} title={myPipeline ? "Showing my loans — click to show all" : "Showing all loans — click to show mine"} style={{display:"inline-flex",alignItems:"center",gap:10,padding:"4px 12px",border:`1px solid ${myPipeline?"var(--accent)":"var(--border-mid)"}`,borderRadius:10,fontSize:12,cursor:"pointer",fontWeight:600,background:myPipeline?"var(--accent-bg)":"var(--bg-alt)",color:"var(--text)",whiteSpace:"nowrap",transition:"all .15s ease"}}><span>My Pipeline</span><span aria-hidden="true" style={{width:30,height:18,borderRadius:999,background:myPipeline?"var(--accent)":"#c4c7ce",position:"relative",transition:"background .15s ease"}}><span style={{position:"absolute",top:2,left:2,width:14,height:14,borderRadius:"50%",background:"#fff",boxShadow:"0 1px 2px rgba(0,0,0,.2)",transform:myPipeline?"translateX(12px)":"translateX(0)",transition:"transform .15s ease"}} /></span></button>        <div style={{display:"flex",gap:2,background:"var(--bg-alt)",borderRadius:"var(--radius)",padding:2}}>
           {viewBtn("pipeline", "Pipeline")}
           {viewBtn("calendar", "Calendar")}
           {viewBtn("details", "Details")}
@@ -859,3 +860,11 @@ root.render(<App />);
 </script>
 </body>
 </html>
+
+
+
+
+
+
+
+

@@ -1,0 +1,27 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git add CLAUDE.md)",
+      "Bash(git commit -m \"Add CLAUDE.md\")",
+      "Bash(git config --global user.email \"thomassolomonjr@gmail.com\")",
+      "Bash(git config --global user.name \"tjsolomon\")",
+      "Bash(git push)",
+      "Bash(git add index.html)",
+      "Bash(git commit -m \"Fix month filter dropdown showing 0 counts and volume\")",
+      "Bash(git commit -m \"Month filter includes overdue active loans; processor short names\")",
+      "Bash(git commit -m \"Use short processor names natively in filter and counts\")",
+      "Bash(git commit -m \"Month filter: only pull in slipped loans from previous month, not all prior\")",
+      "Bash(git commit -m \"Fix SP MERGE 400: use odata=verbose Content-Type to match __metadata in body\")",
+      "Bash(git commit:*)",
+      "Bash(git push origin main)",
+      "Bash(DCM\":*)",
+      "Bash(git pull --rebase)",
+      "Bash(git checkout -b feature/ui-overhaul)",
+      "Bash(git add index.html README.md)",
+      "Bash(git push -u origin feature/ui-overhaul)",
+      "Bash(git checkout main)",
+      "Bash(git branch -D feature/ui-overhaul)",
+      "Bash(git push origin --delete feature/ui-overhaul)"
+    ]
+  }
+}
