@@ -351,7 +351,9 @@
     const fmtCurrency = (n) => n ? `$${(n / 1000).toFixed(0)}K` : "—";
     const fmtCurrencyFull = (n) => n ? `$${n.toLocaleString("en-US")}` : "—";
     const fmtVol = (n) => n >= 1000000 ? `$${(n / 1000000).toFixed(2)}M` : `$${(n / 1000).toFixed(0)}K`;
-    const purposeShort = (p) => { if (p === "No Cash Out Refinance") return "Refi"; if (p === "Cash Out Refinance") return "Cash-Out Refi"; if (p === "Purchase") return "Pur"; return p || "—"; }; const getMergedLender = (l) => l.Lender || "—";
+    const purposeShort = (p) => { if (p === "No Cash Out Refinance") return "Refi"; if (p === "Cash Out Refinance") return "Cash-Out Refi"; if (p === "Purchase") return "Pur"; return p || "—"; };
+    const purposeShortSimple = (p) => { if (p === "No Cash Out Refinance" || p === "Cash Out Refinance") return "Refi"; if (p === "Purchase") return "Pur"; return p || "—"; };
+    const getMergedLender = (l) => l.Lender || "—";
     const isOutsideTitle = (l) => l.OutsideTitle || false;
     const isBkr = (l) => l.Channel === "Broker";
     const isClosed = (l) => l.Status === "Closed" || l.Status === "Post Closing";
@@ -440,7 +442,7 @@
 
     // ─── Shared Components ──────────────────────────────────
     const SH = ({ t, r }) => <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: .6, color: "var(--text-dim)", marginBottom: 12, paddingBottom: 8, borderBottom: "1px solid var(--border)", display: "flex", justifyContent: "space-between", alignItems: "center" }}><span>{t}</span>{r}</div>;
-    const Ce = ({ l, v, h }) => <div style={{ padding: "10px 12px", background: h ? "rgba(234,88,12,0.06)" : "var(--bg-alt)", borderRadius: "var(--radius)", border: h ? "1px solid rgba(234,88,12,0.2)" : "1px solid var(--border)" }}><div style={{ fontSize: 10, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: .4, marginBottom: 3, fontWeight: 500 }}>{l}</div><div style={{ fontSize: 13, fontWeight: 600, color: h ? "#ea580c" : "var(--text)" }}>{v}</div></div>;
+    const Ce = ({ l, v, h }) => <div style={{ padding: "7px 10px", background: h ? "rgba(234,88,12,0.06)" : "var(--bg-alt)", borderRadius: "var(--radius)", border: h ? "1px solid rgba(234,88,12,0.2)" : "1px solid var(--border)" }}><div style={{ fontSize: 10, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: .4, marginBottom: 2, fontWeight: 500 }}>{l}</div><div style={{ fontSize: 13, fontWeight: 600, color: h ? "#ea580c" : "var(--text)" }}>{v}</div></div>;
     const St = ({ n, c, l, active: isActive, onClick: oc3 }) => <div onClick={oc3} style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", padding: "6px 12px", borderRadius: "var(--radius)", background: isActive ? "var(--accent-bg)" : "transparent", border: isActive ? `1px solid ${c}22` : "1px solid transparent", transition: "all .2s ease" }} onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = "var(--bg-hover)"; }} onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = isActive ? "var(--accent-bg)" : "transparent"; }}><span style={{ fontSize: 22, fontWeight: 700, color: c, lineHeight: 1 }}>{n}</span><span style={{ fontSize: 11, color: "var(--text-sub)", lineHeight: 1.2, fontWeight: 500 }}>{l}</span></div>;
 
     // ─── Appraisal Timeline ─────────────────────────────────
@@ -531,7 +533,7 @@
           </div>
           <div style={{ flex: 1, overflowY: "auto", padding: "24px 28px" }}>
             <SH t="Loan Details" r={<a href={lp} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11, color: "var(--accent)", textDecoration: "none", fontWeight: 500 }}>Open in LendingPad ↗</a>} />
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 28 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, marginBottom: 24 }}>
               <Ce l="Closing Date" v={l.DisplayClosingDate ? fmtFull(l.DisplayClosingDate) : "TBD"} />
               <Ce l="Lock Expires" v={l.LockExpirationDate ? fmtFull(l.LockExpirationDate) : "—"} />
               <Ce l="Lender" v={getMergedLender(l)} />
@@ -577,17 +579,17 @@
 
       const flags = [];
 
-      if (l.NewConstruction) flags.push({ t: "New Const", bg: "rgba(59,130,246,0.08)", c: "#2563eb", bd: "rgba(59,130,246,0.3)" });
+
       if (needsCDFlag(l)) flags.push({ t: "ICD", bg: "rgba(139,92,246,0.08)", c: "#7c3aed", bd: "rgba(139,92,246,0.3)" });
       if (!l.IncomeFinalized && !closed) flags.push({ t: "Income TBD", bg: "rgba(245,158,11,0.08)", c: "#d97706", bd: "rgba(245,158,11,0.35)" });
       if (vvoe && vvoe !== "N/A") flags.push({ t: "VVOE", bg: vvoe === "VVOE Complete" ? "rgba(34,197,94,0.1)" : vvoe === "VVOE Working" ? "rgba(245,158,11,0.1)" : "rgba(239,68,68,0.1)", c: vvoe === "VVOE Complete" ? "#059669" : vvoe === "VVOE Working" ? "#d97706" : "#dc2626", bd: vvoe === "VVOE Complete" ? "rgba(34,197,94,0.35)" : vvoe === "VVOE Working" ? "rgba(245,158,11,0.35)" : "rgba(239,68,68,0.3)" });
 
-      return <div onClick={() => oc(l)} style={{ background: "var(--bg-card)", borderRadius: 10, padding: "12px 14px 10px", cursor: "pointer", border: "1px solid var(--border)", transition: "all .15s ease", boxShadow: "0 1px 2px rgba(0,0,0,0.05)", opacity: closed ? .7 : 1 }} onMouseEnter={e => { e.currentTarget.style.boxShadow = "0 4px 12px rgba(0,0,0,0.08)"; e.currentTarget.style.transform = "translateY(-1px)"; }} onMouseLeave={e => { e.currentTarget.style.boxShadow = "0 1px 2px rgba(0,0,0,0.05)"; e.currentTarget.style.transform = "none"; }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 4, gap: 8 }}>
-          <div style={{ fontSize: 14, fontWeight: 600, color: "var(--text)", lineHeight: 1.25 }}>{l.BorrowerLastName}, {l.BorrowerFirstName}</div>
-          <span style={{ fontSize: 12, fontWeight: closed ? 500 : 600, color: dueColor, background: dueBg, padding: l.DisplayClosingDate ? 0 : "3px 8px", borderRadius: l.DisplayClosingDate ? 0 : 999, whiteSpace: "nowrap", lineHeight: 1.2 }}>{dueText}</span>
+      return <div onClick={() => oc(l)} style={{ background: "var(--bg-card)", borderRadius: 12, padding: "14px 16px 12px", cursor: "pointer", border: "1px solid var(--border)", transition: "all .15s ease", boxShadow: "0 1px 3px rgba(0,0,0,0.04)", opacity: closed ? .7 : 1 }} onMouseEnter={e => { e.currentTarget.style.boxShadow = "0 4px 12px rgba(0,0,0,0.08)"; e.currentTarget.style.transform = "translateY(-1px)"; }} onMouseLeave={e => { e.currentTarget.style.boxShadow = "0 1px 3px rgba(0,0,0,0.04)"; e.currentTarget.style.transform = "none"; }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 5, gap: 8 }}>
+          <div style={{ fontSize: 13.5, fontWeight: 600, color: "var(--text)", lineHeight: 1.3 }}>{l.BorrowerLastName}, {l.BorrowerFirstName}</div>
+          <span style={{ fontSize: 12, fontWeight: 500, color: dueColor, background: dueBg, padding: l.DisplayClosingDate ? 0 : "3px 8px", borderRadius: l.DisplayClosingDate ? 0 : 999, whiteSpace: "nowrap", lineHeight: 1.3 }}>{dueText}</span>
         </div>
-        <div style={{ fontSize: 12, color: "var(--text-sub)", marginBottom: 8, fontWeight: 500 }}>{[loanTypeShort(l.LoanType), purposeShort(l.PurposeType), l.Lender || "—", isBkr(l) ? "Broker" : ""].filter(Boolean).join(" · ")}</div>
+        <div style={{ fontSize: 11.5, color: "var(--text-sub)", marginBottom: 8, fontWeight: 400, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{[loanTypeShort(l.LoanType), purposeShort(l.PurposeType), l.Lender || "—", isBkr(l) ? "Broker" : ""].filter(Boolean).join(" · ")}</div>
         {flags.length > 0 && <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginBottom: 8 }}>{flags.map((f, i) => <span key={`${f.t}-${i}`} style={{ fontSize: 10, fontWeight: 500, padding: "2px 7px", borderRadius: 7, background: f.bg, color: f.c, border: `1px solid ${f.bd}`, whiteSpace: "nowrap", lineHeight: 1.2 }}>{f.t}</span>)}</div>}
         <div style={{ height: 2, borderRadius: 999, background: uc.border, opacity: .45 }} />
       </div>;
@@ -611,7 +613,7 @@
       const arrow = (col) => sortCol === col ? (sortDir === "asc" ? " ↑" : " ↓") : "";
       const hStyle = { padding: "8px 6px", textAlign: "left", fontSize: 10, fontWeight: 600, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: .4, cursor: "pointer", whiteSpace: "nowrap", userSelect: "none", borderBottom: "1px solid var(--border)" };
       const hStyleStatic = { ...hStyle, cursor: "default" };
-      const tStyle = { padding: "8px 6px", borderBottom: "1px solid var(--border)", fontSize: 12, color: "var(--text)", whiteSpace: "nowrap" };
+      const tStyle = { padding: "6px 6px", borderBottom: "1px solid var(--border)", fontSize: 12, color: "var(--text)", whiteSpace: "nowrap" };
       const badge = (text, bg, color) => text ? <span key={text} style={{ display: "inline-flex", flex: "0 0 auto", fontSize: 10, fontWeight: 600, padding: "2px 6px", borderRadius: 4, background: bg, color, whiteSpace: "nowrap" }}>{text}</span> : null;
 
       const renderHeaders = () => <tr>
@@ -640,7 +642,7 @@
         if (l.NewConstruction) flags.push({ t: "New Const", bg: "rgba(6,182,212,0.08)", c: "#0891b2" });
         if (needsCDFlag(l)) flags.push({ t: "ICD", bg: "rgba(234,179,8,0.08)", c: "#ca8a04" });
         if (!l.IncomeFinalized && !closed) flags.push({ t: "Income TBD", bg: "rgba(245,158,11,0.08)", c: "#d97706" });
-        if (vvoe && vvoe !== "N/A") flags.push({ t: vvoe, bg: vvoe === "VVOE Complete" ? "rgba(34,197,94,0.08)" : vvoe === "VVOE Working" ? "rgba(245,158,11,0.08)" : "rgba(220,38,38,0.08)", c: vvoe === "VVOE Complete" ? "#16a34a" : vvoe === "VVOE Working" ? "#d97706" : "#dc2626" });
+        if (vvoe && vvoe !== "N/A") flags.push({ t: "VVOE", bg: vvoe === "VVOE Complete" ? "rgba(34,197,94,0.08)" : vvoe === "VVOE Working" ? "rgba(245,158,11,0.08)" : "rgba(220,38,38,0.08)", c: vvoe === "VVOE Complete" ? "#16a34a" : vvoe === "VVOE Working" ? "#d97706" : "#dc2626" });
         if (l.Notes) flags.push({ t: "Notes", bg: "rgba(59,130,246,0.08)", c: "#2563eb" });
         return <tr key={l.Title} onClick={() => oc(l)} style={{ cursor: "pointer" }} onMouseEnter={e => e.currentTarget.style.background = "var(--bg-alt)"} onMouseLeave={e => e.currentTarget.style.background = ""}>
           <td style={{ ...tStyle, fontWeight: 600 }}>{l.BorrowerLastName}, {l.BorrowerFirstName}</td>
@@ -650,7 +652,7 @@
           <td style={tStyle}>{mloAbbr(l.LoanOfficer)}</td>
           <td style={tStyle}>{getMergedLender(l)}</td>
           <td style={tStyle}>{isBkr(l) ? "Broker" : "Corres"}</td>
-          <td style={tStyle}>{purposeShort(l.PurposeType)}</td>
+          <td style={tStyle}>{purposeShortSimple(l.PurposeType)}</td>
           <td style={tStyle}>{loanTypeShort(l.LoanType)}</td>
           <td style={tStyle}>{l.LockExpirationDate ? <span style={{ fontWeight: (lockUrg2 === "overdue" || lockUrg2 === "urgent") ? 600 : 500, color: (lockUrg2 === "overdue" || lockUrg2 === "urgent") ? "#dc2626" : "var(--text)", fontSize: 12 }}>{fmt(l.LockExpirationDate)}</span> : "—"}</td>
           <td style={tStyle}><span style={{ fontWeight: (urg2 === "overdue" || urg2 === "urgent") ? 600 : 500, color: (urg2 === "overdue" || urg2 === "urgent") ? "#dc2626" : "var(--text)", fontSize: 12 }}>{l.DisplayClosingDate ? fmt(l.DisplayClosingDate) : "TBD"}</span></td>
@@ -704,19 +706,15 @@
       const prev = () => { if (calMonth === 0) { setCalMonth(11); setCalYear(calYear - 1); } else setCalMonth(calMonth - 1); };
       const next = () => { if (calMonth === 11) { setCalMonth(0); setCalYear(calYear + 1); } else setCalMonth(calMonth + 1); };
 
-      // Build business-week grid
+      // Build full-week grid (Sun-Sat)
       const weeks = []; let week = [];
       const firstDay = new Date(calYear, calMonth, 1).getDay(); // 0=Sun
-      // Pad beginning: Mon=0, Tue=1...Fri=4
-      const mondayOffset = firstDay === 0 ? 6 : firstDay - 1; // How many weekdays to skip before the 1st
-      for (let p = 0; p < mondayOffset && mondayOffset < 5; p++) week.push(null);
+      for (let p = 0; p < firstDay; p++) week.push(null);
       for (let d = 1; d <= daysInMonth; d++) {
-        const dow = new Date(calYear, calMonth, d).getDay();
-        if (dow === 0 || dow === 6) continue; // skip weekends
         week.push(d);
-        if (dow === 5 || d === daysInMonth) { while (week.length < 5) week.push(null); weeks.push(week); week = []; }
+        if (week.length === 7) { weeks.push(week); week = []; }
       }
-      if (week.length > 0) { while (week.length < 5) week.push(null); weeks.push(week); }
+      if (week.length > 0) { while (week.length < 7) week.push(null); weeks.push(week); }
 
       return <div style={{ padding: "16px 20px" }}>
         <div style={{ background: "var(--bg-card)", borderRadius: "var(--radius-lg)", border: "1px solid var(--border)", overflow: "hidden", boxShadow: "var(--shadow)" }}>
@@ -726,12 +724,13 @@
             <button onClick={next} style={{ background: "transparent", color: "var(--text)", border: "1px solid var(--border)", borderRadius: "var(--radius)", padding: "6px 14px", cursor: "pointer", fontSize: 13, fontWeight: 500, transition: "all .15s ease" }}>Next →</button>
           </div>
           <table style={{ width: "100%", borderCollapse: "collapse", tableLayout: "fixed" }}>
-            <thead><tr>{["Mon", "Tue", "Wed", "Thu", "Fri"].map(d => <th key={d} style={{ padding: "10px 8px", textAlign: "center", fontSize: 10, fontWeight: 600, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: .4, borderBottom: "1px solid var(--border)" }}>{d}</th>)}</tr></thead>
+            <thead><tr>{["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(d => <th key={d} style={{ padding: "10px 8px", textAlign: "center", fontSize: 10, fontWeight: 600, color: (d === "Sun" || d === "Sat") ? "var(--text-muted)" : "var(--text-dim)", textTransform: "uppercase", letterSpacing: .4, borderBottom: "1px solid var(--border)" }}>{d}</th>)}</tr></thead>
             <tbody>{weeks.map((w, wi) => <tr key={wi}>{w.map((d, di) => {
               const dl = d ? loansByDay[d] || [] : []; const today = d && isToday(d); const hol = d ? holidayMap[d] : null;
-              return <td key={di} style={{ border: "1px solid var(--border)", padding: 5, verticalAlign: "top", height: 105, background: hol ? "rgba(245,158,11,0.04)" : today ? "var(--accent-bg)" : d ? "var(--bg-card)" : "var(--bg-alt)", position: "relative" }}>
+              const isWeekend = di === 0 || di === 6;
+              return <td key={di} style={{ border: "1px solid var(--border)", padding: 5, verticalAlign: "top", height: 90, background: hol ? "rgba(245,158,11,0.04)" : today ? "var(--accent-bg)" : isWeekend ? "var(--bg-alt)" : d ? "var(--bg-card)" : "var(--bg-alt)", position: "relative", opacity: isWeekend ? .7 : 1 }}>
                 {d && <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: hol ? 2 : 4 }}>
-                  <span style={{ fontSize: 11, fontWeight: today ? 700 : 500, color: today ? "var(--accent)" : "var(--text-dim)", paddingLeft: 2 }}>{d}</span>
+                  <span style={{ fontSize: 11, fontWeight: today ? 700 : 500, color: today ? "var(--accent)" : isWeekend ? "var(--text-muted)" : "var(--text-dim)", paddingLeft: 2 }}>{d}</span>
                 </div>}
                 {hol && <div style={{ fontSize: 9, color: "#d97706", fontWeight: 600, marginBottom: 3, paddingLeft: 2 }}>{hol}</div>}
                 {dl.map(l => { const sc2 = STATUS_COLORS[l.Status] || STATUS_COLORS.Closed; return <div key={l.Title} onClick={() => oc(l)} style={{ background: sc2.bg, color: sc2.text, fontSize: 10, fontWeight: 600, padding: "3px 5px", borderRadius: 4, marginBottom: 2, cursor: "pointer", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", borderLeft: `2px solid ${sc2.border}`, transition: "opacity .15s ease" }} title={`${l.BorrowerLastName}, ${l.BorrowerFirstName} - ${l.Status}`}>{l.BorrowerLastName}, {l.BorrowerFirstName}</div>; })}
@@ -960,7 +959,7 @@
         {/* Views */}
         {view === "pipeline" && <div style={{ display: "flex", gap: 12, padding: "16px 16px", overflowX: "auto", alignItems: "flex-start" }}>
           {STATUS_ORDER.map(status => {
-            const sc = STATUS_COLORS[status]; const ls = columns[status]; return <div key={status} style={{ background: "var(--bg-card)", borderRadius: "var(--radius-lg)", minWidth: 250, maxWidth: 250, display: "flex", flexDirection: "column", border: "1px solid var(--border)", flexShrink: 0, boxShadow: "var(--shadow)" }}>
+            const sc = STATUS_COLORS[status]; const ls = columns[status]; return <div key={status} style={{ background: "var(--bg-card)", borderRadius: "var(--radius-lg)", minWidth: 270, maxWidth: 270, display: "flex", flexDirection: "column", border: "1px solid var(--border)", flexShrink: 0, boxShadow: "var(--shadow)" }}>
               <div style={{ padding: "12px 14px", display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: `2px solid ${sc.border}`, background: sc.bg, borderTopLeftRadius: "var(--radius-lg)", borderTopRightRadius: "var(--radius-lg)", position: "sticky", top: 0, zIndex: 2 }}><span style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: .5, color: sc.text }}>{status}</span><span style={{ fontSize: 11, fontWeight: 500, color: sc.text, opacity: .6 }}>{ls.length}</span></div>
               <div style={{ padding: 10, display: "flex", flexDirection: "column", gap: 8, background: "var(--bg-alt)", borderBottomLeftRadius: "var(--radius-lg)", borderBottomRightRadius: "var(--radius-lg)" }}>
                 {ls.map(l => <Card key={l.Title} loan={l} onClick={setSel} />)}
