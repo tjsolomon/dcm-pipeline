@@ -95,6 +95,7 @@ The app READS pipeline and conditions data, and WRITES Notes and VVOEStatus back
 ### Key Business Logic
 - **VVOE:** N/A for Broker loans. Auto-flags "VVOE Needed" when correspondent loan closing ≤7 days and no manual status set. If "VVOE Complete", automatically reverts to "VVOE Needed" after 10 business days for Conventional or 10 calendar days for FHA/VA/USDA.
 - **Pipeline Sync:** Displays time based on `LastExportDate` from SharePoint (written by LP export flow) rather than standard Modified timestamp to avoid overriding by manual notes/VVOE updates. Timestamp displays in EST.
+- **Lock:** Auto-flags "Lock" (in red identical to VVOE flag) when LockExpirationDate is before DisplayClosingDate.
 - **ICD (Initial CD Request):** Flags when closing ≤7 days and InitialCDRequest is null
 - **Broker detection:** Uses `Channel` field from Pipeline v2 (`isBkr(l)` checks `l.Channel === "Broker"`)
 - **DisplayClosingDate:** Pre-computed cascade (Closed → Scheduled → Estimate → null) by Power Automate flow
