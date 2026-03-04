@@ -779,7 +779,7 @@
             <tbody>{weeks.map((w, wi) => <tr key={wi}>{w.map((d, di) => {
               const dl = d ? loansByDay[d] || [] : []; const today = d && isToday(d); const hol = d ? holidayMap[d] : null;
               const isWeekend = di === 0 || di === 6;
-              return <td key={di} style={{ border: "1px solid var(--border)", padding: 5, verticalAlign: "top", height: 90, background: hol ? "rgba(245,158,11,0.04)" : today ? "var(--accent-bg)" : isWeekend ? "var(--bg-alt)" : d ? "var(--bg-card)" : "var(--bg-alt)", position: "relative", opacity: isWeekend ? .7 : 1 }}>
+              return <td key={di} style={{ border: "1px solid var(--border)", padding: 5, verticalAlign: "top", height: 90, background: hol ? "rgba(245,158,11,0.12)" : today ? "var(--accent-bg)" : isWeekend ? "var(--border)" : d ? "var(--bg-card)" : "var(--bg-alt)", position: "relative" }}>
                 {d && <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: hol ? 2 : 4 }}>
                   <span style={{ fontSize: 11, fontWeight: today ? 700 : 500, color: today ? "var(--accent)" : isWeekend ? "var(--text-muted)" : "var(--text-dim)", paddingLeft: 2 }}>{d}</span>
                 </div>}
