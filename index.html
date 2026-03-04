@@ -776,7 +776,7 @@
       const [view, setView] = useState("pipeline");
       const [myPipeline, setMyPipeline] = useState(false);
       const [statFilter, setStatFilter] = useState(null); // null | "active" | "soon" | "urgent" | "closed"
-      const [darkMode, setDarkMode] = useState(() => window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+      const [darkMode, setDarkMode] = useState(false);
 
       // Apply dark mode to document root
       useEffect(() => {
