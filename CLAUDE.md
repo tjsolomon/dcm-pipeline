@@ -61,12 +61,13 @@ The app READS pipeline and conditions data, and WRITES Notes and VVOEStatus back
 
 ### Three Views
 1. **Pipeline** — Kanban board, 6 status columns (Processing → Closed), sorted by closing date within columns
-2. **Calendar** — Month grid (Mon-Fri only), federal holidays highlighted, loans shown on closing dates
+2. **Calendar** — Month grid (Sun-Sat, all 7 days), federal holidays highlighted, loans shown on closing dates. Weekends shown with muted styling.
 3. **Details** — Full worksheet table with sortable columns, active loans + separate "Closed This Month" section
 
 ### Detail Panel (slide-out on card click)
-- Loan info grid, LendingPad link, editable Notes (writes to SharePoint), VVOE status buttons (writes to SharePoint)
+- Loan info grid (reduced padding for compact layout), LendingPad link, editable Notes (writes to SharePoint), VVOE status buttons (writes to SharePoint)
 - Outstanding conditions from Conditions list, appraisal timeline, status milestones
+- Status milestones: Processing → Submitted → Approved → Conds Submitted → CTC → Closed
 - Escape key closes the detail panel
 
 ### Visual Design
@@ -79,7 +80,11 @@ The app READS pipeline and conditions data, and WRITES Notes and VVOEStatus back
 - No green for "normal" dates — green only used for completed states
 - Status column colors: Processing=blue, Submission=purple, Approved=teal, Conditions=orange, CTC=green, Closed=gray
 - MLO and Processor colored badges (muted pastels to reduce visual noise)
-- Simplified Kanban cards: borrower name, closing date, loan type · purpose · lender (· Broker), and contextual flags (VVOE color-coded > conditions > lock)
+- Kanban columns: 270px wide, 12px border radius cards, softer shadows
+- Simplified Kanban cards: borrower name, closing date (font-weight 500), loan type · purpose · lender (· Broker) on single truncated line, and contextual flags (VVOE color-coded, ICD, Income TBD)
+  - VVOE flag shows just "VVOE" text with red (Needed), orange (Working), or green (Complete)
+  - No Outside Title or New Const flags on Kanban cards (still shown in Detail Panel and Details View)
+- Details View: compact row padding (6px), Purpose column shows only "Pur" or "Refi" (no "Cash-Out Refi"), VVOE flags show "VVOE" with color coding
 - "DCM" brand mark in header
 
 ### Stats Bar
