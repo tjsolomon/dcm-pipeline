@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -868,3 +869,875 @@ root.render(<App />);
 
 
 
+=======
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Office Pipeline | DCM</title>
+<script src="https://alcdn.msauth.net/browser/2.38.0/js/msal-browser.min.js"></script>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f8f9fa;--bg-card:#fff;--bg-alt:#f1f3f5;--bg-header:#fff;--bg-hover:#f1f3f5;--text:#1a1a2e;--text-sub:#5c5f6a;--text-dim:#8b8d97;--text-muted:#adb0b8;--border:#e9ecef;--border-mid:#dee2e6;--shadow:0 1px 3px rgba(0,0,0,0.04),0 1px 2px rgba(0,0,0,0.06);--shadow-hover:0 4px 12px rgba(0,0,0,0.08),0 2px 4px rgba(0,0,0,0.04);--shadow-lg:0 8px 24px rgba(0,0,0,0.1);--overlay:rgba(0,0,0,0.4);--input-bg:#fff;--accent:#5b5fc7;--accent-hover:#484caf;--accent-bg:#eef0fb;--error-bg:#fef2f2;--error-text:#dc2626;--radius:8px;--radius-lg:12px}
+[data-dark="true"]{--bg:#111113;--bg-card:#1c1c1e;--bg-alt:#18181b;--bg-header:#1c1c1e;--bg-hover:#27272a;--text:#e4e4e7;--text-sub:#a1a1aa;--text-dim:#71717a;--text-muted:#52525b;--border:#27272a;--border-mid:#3f3f46;--shadow:0 1px 3px rgba(0,0,0,0.2),0 1px 2px rgba(0,0,0,0.3);--shadow-hover:0 4px 12px rgba(0,0,0,0.3),0 2px 4px rgba(0,0,0,0.2);--shadow-lg:0 8px 24px rgba(0,0,0,0.4);--overlay:rgba(0,0,0,0.6);--input-bg:#27272a;--accent:#818cf8;--accent-hover:#6366f1;--accent-bg:rgba(129,140,248,0.12);--error-bg:rgba(220,38,38,0.12);--error-text:#fca5a5}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Inter','Segoe UI',-apple-system,BlinkMacSystemFont,sans-serif;background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;letter-spacing:-0.011em}
+.auth-screen{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;gap:16px}
+.auth-btn{padding:12px 28px;background:var(--accent);color:#fff;border:none;border-radius:var(--radius);font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .15s ease}
+.auth-btn:hover{background:var(--accent-hover);transform:translateY(-1px);box-shadow:var(--shadow-hover)}
+.auth-msg{font-size:14px;color:var(--text-sub)}
+.auth-err{font-size:13px;color:var(--error-text);max-width:500px;text-align:center}
+.loading{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;gap:12px;color:var(--text-sub)}
+.spinner{width:32px;height:32px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel">
+const { useState, useEffect, useMemo, useRef, useCallback } = React;
+
+// ═══════════════════════════════════════════════════════════
+// CONFIGURATION — Update these values for your environment
+// ═══════════════════════════════════════════════════════════
+const CONFIG = {
+  // Azure AD / Entra ID
+  clientId: "fda4bbf5-6010-4343-b3c9-1f82ee3b4090",
+  tenantId: "aa14bd5b-4ade-4898-8235-d7b18e6f59e1",
+  redirectUri: "https://pipeline.dcmloan.com",
+
+  // SharePoint
+  siteUrl: "https://dcmloan.sharepoint.com",
+  pipelineListName: "Office Pipeline v2",
+  conditionsListName: "Conditions",
+
+  // Refresh interval (milliseconds) — 5 minutes
+  refreshInterval: 300000,
+};
+
+// ═══════════════════════════════════════════════════════════
+// MSAL AUTHENTICATION
+// ═══════════════════════════════════════════════════════════
+const msalConfig = {
+  auth: {
+    clientId: CONFIG.clientId,
+    authority: `https://login.microsoftonline.com/${CONFIG.tenantId}`,
+    redirectUri: CONFIG.redirectUri,
+  },
+  cache: { cacheLocation: "sessionStorage", storeAuthStateInCookie: false },
+};
+const msalInstance = new msal.PublicClientApplication(msalConfig);
+const loginRequest = { scopes: [`${CONFIG.siteUrl}/Sites.ReadWrite.All`] };
+
+async function getToken() {
+  const accounts = msalInstance.getAllAccounts();
+  if (accounts.length === 0) throw new Error("No accounts");
+  try {
+    const resp = await msalInstance.acquireTokenSilent({ ...loginRequest, account: accounts[0] });
+    return resp.accessToken;
+  } catch (e) {
+    const resp = await msalInstance.acquireTokenPopup(loginRequest);
+    return resp.accessToken;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// SHAREPOINT API LAYER
+// ═══════════════════════════════════════════════════════════
+const SP_BASE = `${CONFIG.siteUrl}/_api/web/lists`;
+
+async function spGet(listName, select, filter, top = 5000) {
+  const token = await getToken();
+  let url = `${SP_BASE}/getbytitle('${encodeURIComponent(listName)}')/items?$top=${top}`;
+  if (select) url += `&$select=${select}`;
+  if (filter) url += `&$filter=${encodeURIComponent(filter)}`;
+  const resp = await fetch(url, {
+    headers: { Authorization: `Bearer ${token}`, Accept: "application/json;odata=nometadata" },
+  });
+  if (!resp.ok) {
+    const errText = await resp.text();
+    throw new Error(`SP GET ${resp.status}: ${listName} — ${errText.slice(0, 200)}`);
+  }
+  const data = await resp.json();
+  return data.value;
+}
+
+async function spUpdate(listName, itemId, fields) {
+  const token = await getToken();
+  // Get list item entity type
+  const typeResp = await fetch(
+    `${SP_BASE}/getbytitle('${encodeURIComponent(listName)}')/?$select=ListItemEntityTypeFullName`,
+    { headers: { Authorization: `Bearer ${token}`, Accept: "application/json;odata=nometadata" } }
+  );
+  const typeData = await typeResp.json();
+  const entityType = typeData.ListItemEntityTypeFullName;
+
+  const url = `${SP_BASE}/getbytitle('${encodeURIComponent(listName)}')/items(${itemId})`;
+  const resp = await fetch(url, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Accept: "application/json;odata=nometadata",
+      "Content-Type": "application/json;odata=verbose",
+      "IF-MATCH": "*",
+      "X-HTTP-Method": "MERGE",
+    },
+    body: JSON.stringify({ __metadata: { type: entityType }, ...fields }),
+  });
+  if (!resp.ok && resp.status !== 204) throw new Error(`SP UPDATE failed: ${resp.status}`);
+}
+
+// Field mapping: SharePoint internal names → our app property names
+function mapPipelineItem(item) {
+  return {
+    _spId: item.Id,
+    Title: item.Title || "",
+    LoanID: item.LoanID || "",
+    BorrowerFirstName: item.BorrowerFirstName || "",
+    BorrowerLastName: item.BorrowerLastName || "",
+    LoanOfficer: item.LoanOfficer || "",
+    Processor: item.Processor || "",
+    Status: item.Status || "",
+    PurposeType: item.PurposeType || "",
+    TotalLoanAmount: item.TotalLoanAmount || 0,
+    Lender: item.Lender || "",
+    Channel: item.Channel || "",
+    OutsideTitle: item.OutsideTitle || false,
+    LoanType: item.LoanType || "",
+    OccupancyType: item.OccupancyType || "",
+    DisplayClosingDate: item.DisplayClosingDate || null,
+    ClosingEstimateDate: item.ClosingEstimateDate || null,
+    ScheduledClosingDate: item.ScheduledClosingDate || null,
+    ClosedDate: item.ClosedDate || null,
+    LockExpirationDate: item.LockExpirationDate || null,
+    TitleCompany: item.TitleCompany || "",
+    NewConstruction: item.NewConstruction || false,
+    IncomeFinalized: item.IncomeFinalized || false,
+    InitialCDRequest: item.InitialCDRequest || null,
+    AppraisalRequestDate: item.AppraisalRequestDate || null,
+    AppraisalInspectionDate: item.AppraisalInspectionDate || null,
+    AppraisalExpectedDeliveryDate: item.AppraisalExpectedDeliveryDate || null,
+    AppraisalDeliveryDate: item.AppraisalDeliveryDate || null,
+    ProcessingDate: item.ProcessingDate || null,
+    InitialSubmissionDate: item.InitialSubmissionDate || null,
+    ApprovedDate: item.ApprovedDate || null,
+    ConditionSubmissionDate: item.ConditionSubmissionDate || null,
+    ClearToCloseDate: item.ClearToCloseDate || null,
+    Notes: item.Notes || "",
+    VVOEStatus: item.VVOEStatus || null,
+    ConditionsCount: item.ConditionsCount || 0,
+    Modified: item.Modified || null,
+  };
+}
+
+function mapConditionItem(item) {
+  return {
+    LoanNumber: item.LoanNumber || item.Title || "",
+    ConditionCategory: item.ConditionCategory || "",
+    Condition: item.Condition || "",
+    ResponsibleParties: item.ResponsibleParties || "",
+    ConditionCode: item.ConditionCode || "",
+  };
+}
+
+async function fetchPipelineData() {
+  const fields = [
+    "Id","Title","LoanID","BorrowerFirstName","BorrowerLastName","LoanOfficer","Processor",
+    "Status","PurposeType","TotalLoanAmount","Lender","Channel","LoanType","OccupancyType",
+    "DisplayClosingDate","ClosingEstimateDate","ScheduledClosingDate","ClosedDate",
+    "LockExpirationDate","TitleCompany","NewConstruction","OutsideTitle","IncomeFinalized","InitialCDRequest",
+    "AppraisalRequestDate","AppraisalInspectionDate","AppraisalExpectedDeliveryDate",
+    "AppraisalDeliveryDate","ProcessingDate","InitialSubmissionDate","ApprovedDate",
+    "ConditionSubmissionDate","ClearToCloseDate","Notes","VVOEStatus","ConditionsCount","Modified"
+  ].join(",");
+
+  const [pipelineRaw, conditionsRaw] = await Promise.all([
+    spGet(CONFIG.pipelineListName, fields),
+    spGet(CONFIG.conditionsListName, "Title,LoanNumber,ConditionCategory,Condition,ResponsibleParties,ConditionCode"),
+  ]);
+
+  const loans = pipelineRaw.map(mapPipelineItem);
+  const conditions = conditionsRaw.map(mapConditionItem);
+
+  // Find most recent Modified timestamp from SharePoint data
+  let lastModified = null;
+  pipelineRaw.forEach(item => {
+    if (item.Modified) {
+      const m = new Date(item.Modified);
+      if (!lastModified || m > lastModified) lastModified = m;
+    }
+  });
+
+  // Group conditions by loan number
+  const condMap = {};
+  conditions.forEach(c => {
+    const key = c.LoanNumber;
+    if (!condMap[key]) condMap[key] = [];
+    condMap[key].push(c);
+  });
+
+  return { loans, condMap, lastModified };
+}
+
+async function saveNotes(spId, notes) {
+  await spUpdate(CONFIG.pipelineListName, spId, { Notes: notes });
+}
+
+async function saveVVOE(spId, vvoeStatus) {
+  await spUpdate(CONFIG.pipelineListName, spId, { VVOEStatus: vvoeStatus || null });
+}
+
+// ═══════════════════════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════════════════════
+const dayMs = 86400000;
+const diffDays = (d) => { if (!d) return null; return Math.ceil((new Date(d) - new Date()) / dayMs); };
+const fmt = (d) => { if (!d) return ""; const t = new Date(d); return `${t.getMonth()+1}/${t.getDate()}/${t.getFullYear().toString().slice(2)}`; };
+const fmtFull = (d) => { if (!d) return "—"; const t = new Date(d); return `${String(t.getMonth()+1).padStart(2,"0")}/${String(t.getDate()).padStart(2,"0")}/${t.getFullYear()}`; };
+const fmtCurrency = (n) => n ? `$${(n/1000).toFixed(0)}K` : "—";
+const fmtCurrencyFull = (n) => n ? `$${n.toLocaleString("en-US")}` : "—";
+const fmtVol = (n) => n >= 1000000 ? `$${(n/1000000).toFixed(2)}M` : `$${(n/1000).toFixed(0)}K`;
+const purposeShort = (p) => { if (p === "No Cash Out Refinance") return "Refi"; if (p === "Cash Out Refinance") return "Cash-Out Refi"; if (p === "Purchase") return "Pur"; return p || "—"; };const getMergedLender = (l) => l.Lender || "—";
+const isOutsideTitle = (l) => l.OutsideTitle || false;
+const isBkr = (l) => l.Channel === "Broker";
+const isClosed = (l) => l.Status === "Closed" || l.Status === "Post Closing";
+const channelLabel = (l) => isBkr(l) ? "Broker" : "Correspondent";
+const loanTypeShort = (t) => { if (!t) return "—"; if (t === "USDA Rural Housing") return "USDA"; if (t === "Conventional") return "Conf"; return t; };
+const getMonthKey = (d) => { if (!d) return "No Date"; const t=new Date(d); return `${["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][t.getMonth()]} ${t.getFullYear()}`; };
+const getMonthSort = (d) => { if (!d) return "9999-99"; const t=new Date(d); return `${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,"0")}`; };
+const getMonthStart = (monthKey) => { const [mon,yr]=monthKey.split(" "); const idx=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"].indexOf(mon); return new Date(parseInt(yr),idx,1); };
+
+// Processor display names
+const PROC_SHORT = {"Christopher Guzman":"Chris","Brandy Costello":"Brandy","Mike Zographos":"Mike"};
+const shortProc = (name) => { if (!name) return ""; return PROC_SHORT[name] || name.split(" ")[0]; };
+
+// Urgency
+const urgency = (d, status) => {
+  if (status === "Closed" || status === "Post Closing") return "closed";
+  const dd = diffDays(d);
+  if (dd === null) return "none";
+  if (dd <= 0) return "overdue";
+  if (dd <= 3) return "urgent";
+  if (dd <= 7) return "soon";
+  return "normal";
+};
+const lockUrgency = (d) => {
+  const dd = diffDays(d);
+  if (dd === null) return "none";
+  if (dd <= 0) return "overdue";
+  if (dd <= 3) return "urgent";
+  if (dd <= 7) return "soon";
+  return "normal";
+};
+const UC = {
+  overdue:{bg:"rgba(220,38,38,0.06)",text:"#dc2626",border:"#dc2626"},
+  urgent:{bg:"rgba(220,38,38,0.06)",text:"#dc2626",border:"#dc2626"},
+  soon:{bg:"rgba(234,88,12,0.06)",text:"#ea580c",border:"#f59e0b"},
+  normal:{bg:"var(--bg-alt)",text:"var(--text-dim)",border:"var(--border-mid)"},
+  closed:{bg:"var(--bg-alt)",text:"var(--text-muted)",border:"var(--border-mid)"},
+  none:{bg:"var(--bg-alt)",text:"var(--text-dim)",border:"var(--border-mid)"},
+};
+
+// VVOE logic
+const getEffectiveVVOE = (l) => {
+  if (isBkr(l)) return "N/A";
+  if (l.VVOEStatus) return l.VVOEStatus;
+  const dd = diffDays(l.DisplayClosingDate);
+  if (dd !== null && dd <= 7) return "VVOE Needed";
+  return "N/A";
+};
+// ICD flag logic
+const needsCDFlag = (l) => {
+  if (isClosed(l)) return false;
+  const dd = diffDays(l.DisplayClosingDate);
+  return dd !== null && dd <= 7 && !l.InitialCDRequest;
+};
+
+const STATUS_ORDER = ["Processing","Initial Submission","Approved","Condition Submission","Clear To Close","Closed"];
+const STATUS_COLORS = {
+  Processing:{bg:"rgba(59,130,246,0.08)",border:"#3b82f6",text:"#2563eb"},
+  "Initial Submission":{bg:"rgba(139,92,246,0.08)",border:"#8b5cf6",text:"#7c3aed"},
+  Approved:{bg:"rgba(6,182,212,0.08)",border:"#06b6d4",text:"#0891b2"},
+  "Condition Submission":{bg:"rgba(245,158,11,0.08)",border:"#f59e0b",text:"#d97706"},
+  "Clear To Close":{bg:"rgba(34,197,94,0.08)",border:"#22c55e",text:"#16a34a"},
+  Closed:{bg:"var(--bg-alt)",border:"var(--border-mid)",text:"var(--text-dim)"},
+  "Post Closing":{bg:"var(--bg-alt)",border:"var(--border-mid)",text:"var(--text-dim)"},
+};
+
+// MLO/Processor colors — muted pastel to avoid visual noise
+const MLO_COLORS = {
+  "Thomas Solomon":{background:"rgba(34,197,94,0.08)",color:"#16a34a"},
+  "Amanda Reed":{background:"rgba(59,130,246,0.08)",color:"#2563eb"},
+  "Mike Zographos":{background:"rgba(139,92,246,0.08)",color:"#7c3aed"},
+  "Albert Kim":{background:"rgba(6,182,212,0.08)",color:"#0891b2"},
+  "Kelvin Williams":{background:"rgba(245,158,11,0.08)",color:"#d97706"},
+  "Mary Jones":{background:"rgba(244,63,94,0.08)",color:"#e11d48"},
+  "Jessica Parker":{background:"rgba(168,85,247,0.08)",color:"#9333ea"},
+  "David Thornton":{background:"rgba(234,179,8,0.08)",color:"#ca8a04"},
+  "Ryan Mitchell":{background:"rgba(20,184,166,0.08)",color:"#0d9488"},
+};
+const getMLOColor = (name) => MLO_COLORS[name] || {background:"var(--bg-alt)",color:"var(--text-sub)"};
+const PROC_COLORS = {
+  Chris:{background:"rgba(59,130,246,0.08)",color:"#2563eb"},
+  Mike:{background:"rgba(139,92,246,0.08)",color:"#7c3aed"},
+  Brandy:{background:"rgba(168,85,247,0.08)",color:"#9333ea"},
+};
+const getProcColor = (name) => PROC_COLORS[name] || {background:"var(--bg-alt)",color:"var(--text-sub)"};
+
+// ─── Shared Components ──────────────────────────────────
+const SH = ({t,r}) => <div style={{fontSize:11,fontWeight:600,textTransform:"uppercase",letterSpacing:.6,color:"var(--text-dim)",marginBottom:12,paddingBottom:8,borderBottom:"1px solid var(--border)",display:"flex",justifyContent:"space-between",alignItems:"center"}}><span>{t}</span>{r}</div>;
+const Ce = ({l,v,h}) => <div style={{padding:"10px 12px",background:h?"rgba(234,88,12,0.06)":"var(--bg-alt)",borderRadius:"var(--radius)",border:h?"1px solid rgba(234,88,12,0.2)":"1px solid var(--border)"}}><div style={{fontSize:10,color:"var(--text-dim)",textTransform:"uppercase",letterSpacing:.4,marginBottom:3,fontWeight:500}}>{l}</div><div style={{fontSize:13,fontWeight:600,color:h?"#ea580c":"var(--text)"}}>{v}</div></div>;
+const St = ({n,c,l,active:isActive,onClick:oc3}) => <div onClick={oc3} style={{display:"flex",alignItems:"center",gap:8,cursor:"pointer",padding:"6px 12px",borderRadius:"var(--radius)",background:isActive?"var(--accent-bg)":"transparent",border:isActive?`1px solid ${c}22`:"1px solid transparent",transition:"all .2s ease"}} onMouseEnter={e=>{if(!isActive)e.currentTarget.style.background="var(--bg-hover)";}} onMouseLeave={e=>{if(!isActive)e.currentTarget.style.background=isActive?"var(--accent-bg)":"transparent";}}><span style={{fontSize:22,fontWeight:700,color:c,lineHeight:1}}>{n}</span><span style={{fontSize:11,color:"var(--text-sub)",lineHeight:1.2,fontWeight:500}}>{l}</span></div>;
+
+// ─── Appraisal Timeline ─────────────────────────────────
+const AT = ({loan:l}) => {
+  const steps=[{label:"Requested",date:l.AppraisalRequestDate},{label:"Inspection",date:l.AppraisalInspectionDate},{label:"Expected",date:l.AppraisalExpectedDeliveryDate},{label:"Delivered",date:l.AppraisalDeliveryDate}];
+  if(!steps.some(s=>s.date)) return <div style={{color:"var(--text-dim)",fontSize:13,fontStyle:"italic"}}>No appraisal data</div>;
+  const last=steps.reduce((a,s,i)=>s.date?i:a,-1);
+  return <div style={{display:"flex",alignItems:"flex-start",margin:"8px 0"}}>
+    {steps.map((s,i)=>{const done=!!s.date;const isL=i===steps.length-1;return <div key={i} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",position:"relative"}}>
+      <div style={{display:"flex",alignItems:"center",width:"100%",position:"relative"}}>
+        {i>0&&<div style={{position:"absolute",left:0,right:"50%",top:"50%",height:2,background:i<=last?"#16a34a":"var(--border)",transform:"translateY(-50%)"}}/>}
+        {!isL&&<div style={{position:"absolute",left:"50%",right:0,top:"50%",height:2,background:i<last?"#16a34a":"var(--border)",transform:"translateY(-50%)"}}/>}
+        <div style={{width:18,height:18,borderRadius:"50%",background:done?"#16a34a":"var(--bg-card)",border:`2px solid ${done?"#16a34a":"var(--border-mid)"}`,margin:"0 auto",position:"relative",zIndex:1,display:"flex",alignItems:"center",justifyContent:"center"}}>{done&&<span style={{color:"#fff",fontSize:10,fontWeight:700}}>✓</span>}</div>
+      </div>
+      <div style={{fontSize:10,color:"var(--text-sub)",marginTop:4,textAlign:"center",fontWeight:600}}>{s.label}</div>
+      <div style={{fontSize:10,color:done?"var(--text)":"var(--text-muted)",textAlign:"center"}}>{s.date?fmt(s.date):"—"}</div>
+    </div>;})}
+  </div>;
+};
+
+// ─── Status Milestones ──────────────────────────────────
+const SM = ({loan:l}) => {
+  const ms=[{label:"Processing",date:l.ProcessingDate},{label:"Submitted",date:l.InitialSubmissionDate},{label:"Approved",date:l.ApprovedDate},{label:"Conditions",date:l.ConditionSubmissionDate},{label:"Conds Submitted",date:l.ConditionSubmissionDate},{label:"CTC",date:l.ClearToCloseDate}];
+  return <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8}}>
+    {ms.map((m,i)=><div key={i} style={{padding:"8px 10px",background:m.date?"rgba(34,197,94,0.06)":"var(--bg-alt)",borderRadius:"var(--radius)",border:`1px solid ${m.date?"rgba(34,197,94,0.15)":"var(--border)"}`}}>
+      <div style={{fontSize:10,color:"var(--text-dim)",textTransform:"uppercase",letterSpacing:.4,marginBottom:2,fontWeight:500}}>{m.label}</div>
+      <div style={{fontSize:12,fontWeight:600,color:m.date?"#16a34a":"var(--text-muted)"}}>{m.date?fmt(m.date):"—"}</div>
+    </div>)}
+  </div>;
+};
+
+// ─── Condition Item ──────────────────────────────────────
+const CI = ({c}) => {
+  const [exp,setExp]=useState(false);
+  const isLong=c.Condition.length>60;
+  const disp=!isLong||exp?c.Condition:c.Condition.slice(0,60)+"…";
+  return <div style={{padding:"12px 14px",border:"1px solid var(--border)",borderRadius:"var(--radius)",marginBottom:8,background:"var(--bg-card)",display:"flex",alignItems:"flex-start",gap:12}}>
+    <div style={{width:26,height:26,borderRadius:6,background:"rgba(245,158,11,0.08)",color:"#d97706",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,flexShrink:0,fontWeight:700,marginTop:2}}>!</div>
+    <div style={{flex:1}}>
+      <div style={{fontSize:13,fontWeight:600,color:"var(--text)"}}>{disp}{isLong&&<button onClick={()=>setExp(!exp)} style={{background:"none",border:"none",color:"var(--accent)",fontSize:11,cursor:"pointer",marginLeft:4}}>{exp?"show less":"show more"}</button>}</div>
+      <div style={{fontSize:11,color:"var(--text-sub)",marginTop:2,display:"flex",gap:12}}>
+        <span>{c.ConditionCategory}</span><span>Responsible: {c.ResponsibleParties}</span>
+        {c.ConditionCode&&<span style={{color:"var(--text-muted)"}}>{c.ConditionCode}</span>}
+      </div>
+    </div>
+  </div>;
+};
+
+// ─── Detail Panel ───────────────────────────────────────
+const DetailPanel = ({loan:l,condMap,onClose:oc,onSaveNotes,onSaveVVOE}) => {
+  const [notes,setNotes]=useState(l.Notes||"");
+  const [vvoe,setVvoe]=useState(l.VVOEStatus||"");
+  const [saving,setSaving]=useState(false);
+  const [saved,setSaved]=useState(false);
+  const conds=condMap[l.Title]||[];
+  const urg2=urgency(l.DisplayClosingDate,l.Status);const uc=UC[urg2];
+  const sc=STATUS_COLORS[l.Status]||STATUS_COLORS.Closed;
+  const broker=isBkr(l);
+  const lp=`https://prod.lendingpad.com/web/#/company/loans/${l.LoanID}`;
+  const handleSave=async()=>{
+    setSaving(true);
+    try{await onSaveNotes(l._spId,notes);setSaved(true);setTimeout(()=>setSaved(false),2000);}
+    catch(e){alert("Failed to save notes: "+e.message);}
+    finally{setSaving(false);}
+  };
+  const handleVVOE=async(v)=>{
+    setVvoe(v);
+    try{await onSaveVVOE(l._spId,v);}
+    catch(e){alert("Failed to save VVOE: "+e.message);}
+  };
+  const vo=broker?["N/A"]:["N/A","VVOE Needed","VVOE Working","VVOE Complete"];
+  const vs={"N/A":{bg:"var(--bg-alt)",c:"var(--text-dim)"},"VVOE Needed":{bg:"rgba(220,38,38,0.1)",c:"#dc2626"},"VVOE Working":{bg:"rgba(245,158,11,0.1)",c:"#d97706"},"VVOE Complete":{bg:"rgba(34,197,94,0.1)",c:"#16a34a"}};
+  return <>
+    <div onClick={oc} style={{position:"fixed",inset:0,background:"var(--overlay)",zIndex:1000,cursor:"pointer",backdropFilter:"blur(2px)"}}/>
+    <div style={{position:"fixed",top:0,right:0,width:520,height:"100%",background:"var(--bg-card)",zIndex:1001,boxShadow:"var(--shadow-lg)",display:"flex",flexDirection:"column",borderLeft:"1px solid var(--border)"}}>
+      <div style={{padding:"20px 24px",background:`linear-gradient(135deg,${sc.border},${sc.text})`,color:"#fff",position:"relative",flexShrink:0}}>
+        <button onClick={oc} style={{position:"absolute",top:12,right:16,background:"rgba(255,255,255,0.15)",border:"none",color:"#fff",width:28,height:28,borderRadius:6,fontSize:14,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",transition:"all .15s ease",backdropFilter:"blur(4px)"}}>✕</button>
+        <div style={{fontSize:20,fontWeight:700,marginBottom:4,letterSpacing:-.3}}>{l.BorrowerLastName}, {l.BorrowerFirstName}</div>
+        <div style={{fontSize:13,opacity:.85}}>#{l.Title} · {loanTypeShort(l.LoanType)} {purposeShort(l.PurposeType)} · {fmtCurrencyFull(l.TotalLoanAmount)}</div>
+        <div style={{display:"flex",gap:6,marginTop:12,flexWrap:"wrap"}}>
+          <span style={{padding:"4px 10px",borderRadius:20,fontSize:11,fontWeight:600,background:"rgba(255,255,255,0.2)",color:"#fff"}}>{l.Status}</span>
+          <span style={{padding:"4px 10px",borderRadius:20,fontSize:11,fontWeight:600,background:"rgba(255,255,255,0.15)",color:"#fff"}}>Close: {l.DisplayClosingDate?fmtFull(l.DisplayClosingDate):"TBD"}</span>
+          {isOutsideTitle(l)&&<span style={{padding:"4px 10px",borderRadius:20,fontSize:11,fontWeight:600,background:"rgba(255,255,255,0.15)",color:"#fff"}}>Outside Title</span>}
+          {l.NewConstruction&&<span style={{padding:"4px 10px",borderRadius:20,fontSize:11,fontWeight:600,background:"rgba(255,255,255,0.15)",color:"#fff"}}>New Construction</span>}
+        </div>
+      </div>
+      <div style={{flex:1,overflowY:"auto",padding:"24px 28px"}}>
+        <SH t="Loan Details" r={<a href={lp} target="_blank" rel="noopener noreferrer" style={{fontSize:11,color:"var(--accent)",textDecoration:"none",fontWeight:500}}>Open in LendingPad ↗</a>}/>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:28}}>
+          <Ce l="Closing Date" v={l.DisplayClosingDate?fmtFull(l.DisplayClosingDate):"TBD"}/>
+          <Ce l="Lock Expires" v={l.LockExpirationDate?fmtFull(l.LockExpirationDate):"—"}/>
+          <Ce l="Lender" v={getMergedLender(l)}/>
+          <Ce l="Channel" v={channelLabel(l)}/>
+          <Ce l="Loan Type" v={`${loanTypeShort(l.LoanType)} · ${l.OccupancyType}`}/>
+          <Ce l="Loan Amount" v={fmtCurrencyFull(l.TotalLoanAmount)}/>
+          <Ce l="MLO" v={l.LoanOfficer}/>
+          <Ce l="Processor" v={l.Processor}/>
+          <Ce l="Title Company" v={l.TitleCompany||"—"}/>
+          <Ce l="Income Finalized" v={l.IncomeFinalized?"Yes":"No"} h={!l.IncomeFinalized}/>
+          <Ce l="Initial CD Requested" v={l.InitialCDRequest?"Yes":"No"} h={needsCDFlag(l)}/>
+          <Ce l="New Construction" v={l.NewConstruction?"Yes":"No"}/>
+        </div>
+        <SH t="Notes"/>
+        <div style={{marginBottom:28}}>
+          <textarea value={notes} onChange={e=>setNotes(e.target.value)} placeholder="Add processor notes..." style={{width:"100%",minHeight:70,padding:12,border:"1px solid var(--border)",borderRadius:"var(--radius)",fontSize:13,fontFamily:"'Inter','Segoe UI',sans-serif",resize:"vertical",background:"var(--input-bg)",color:"var(--text)",outline:"none",transition:"border-color .15s ease"}} onFocus={e=>e.target.style.borderColor="var(--accent)"} onBlur={e=>e.target.style.borderColor="var(--border)"}/>
+          <div style={{display:"flex",gap:8,marginTop:8,alignItems:"center"}}>
+            <button onClick={handleSave} disabled={saving} style={{padding:"7px 18px",background:saving?"var(--border-mid)":"var(--accent)",color:"#fff",border:"none",borderRadius:"var(--radius)",fontSize:12,fontWeight:600,cursor:saving?"default":"pointer",transition:"all .15s ease"}}>{saving?"Saving...":"Save Notes"}</button>
+            {saved&&<span style={{fontSize:12,color:"#16a34a",fontWeight:600}}>✓ Saved</span>}
+          </div>
+        </div>
+        <SH t="VVOE Status"/>
+        <div style={{marginBottom:28}}>
+          {broker&&<div style={{fontSize:12,color:"var(--text-dim)",marginBottom:6}}>N/A — Broker loan</div>}
+          {!broker&&<div style={{display:"flex",gap:6}}>{vo.map(v=>{const a=vvoe===v;const s=vs[v]||vs["N/A"];return <button key={v} onClick={()=>handleVVOE(v)} style={{padding:"6px 14px",borderRadius:20,fontSize:12,fontWeight:600,cursor:"pointer",border:"1px solid",transition:"all .15s ease",...(a?{background:s.bg,color:s.c,borderColor:"transparent"}:{background:"transparent",color:"var(--text-sub)",borderColor:"var(--border)"})}}>{v}</button>;})}</div>}
+        </div>
+        <SH t={`Outstanding Conditions (${conds.length})`}/>
+        <div style={{marginBottom:28}}>{conds.length===0?<div style={{color:"#16a34a",fontSize:13,display:"flex",alignItems:"center",gap:6,fontWeight:500}}><span style={{fontSize:16}}>✓</span> All conditions cleared</div>:conds.map((c,i)=><CI key={i} c={c}/>)}</div>
+        <SH t="Appraisal Tracking"/><div style={{marginBottom:28}}><AT loan={l}/></div>
+        <SH t="Status Milestones"/><div style={{marginBottom:28}}><SM loan={l}/></div>
+      </div>
+    </div>
+  </>;
+};
+
+// ─── Kanban Card ─────────────────────────────────────────
+const Card = ({loan:l,onClick:oc}) => {
+  const urg2=urgency(l.DisplayClosingDate,l.Status);const uc=UC[urg2];
+  const closed=isClosed(l);const vvoe=getEffectiveVVOE(l);
+  const dueText=l.DisplayClosingDate?fmt(l.DisplayClosingDate):"TBD";
+  const dueColor=urg2==="overdue"||urg2==="urgent"?"#dc2626":"var(--text-sub)";
+  const dueBg=l.DisplayClosingDate?"transparent":"var(--bg-alt)";
+
+  const flags=[];
+  if(isOutsideTitle(l)) flags.push({t:"Outside Title",bg:"rgba(168,85,247,0.08)",c:"#7c3aed",bd:"rgba(168,85,247,0.35)"});
+  if(l.NewConstruction) flags.push({t:"New Const",bg:"rgba(59,130,246,0.08)",c:"#2563eb",bd:"rgba(59,130,246,0.3)"});
+  if(needsCDFlag(l)) flags.push({t:"ICD",bg:"rgba(139,92,246,0.08)",c:"#7c3aed",bd:"rgba(139,92,246,0.3)"});
+  if(!l.IncomeFinalized&&!closed) flags.push({t:"Income TBD",bg:"rgba(245,158,11,0.08)",c:"#d97706",bd:"rgba(245,158,11,0.35)"});
+  if(vvoe&&vvoe!=="N/A") flags.push({t:vvoe,bg:vvoe==="VVOE Complete"?"rgba(34,197,94,0.1)":vvoe==="VVOE Working"?"rgba(245,158,11,0.1)":"rgba(239,68,68,0.1)",c:vvoe==="VVOE Complete"?"#059669":vvoe==="VVOE Working"?"#d97706":"#dc2626",bd:vvoe==="VVOE Complete"?"rgba(34,197,94,0.35)":vvoe==="VVOE Working"?"rgba(245,158,11,0.35)":"rgba(239,68,68,0.3)"});
+
+  return <div onClick={()=>oc(l)} style={{background:"var(--bg-card)",borderRadius:10,padding:"12px 14px 10px",cursor:"pointer",border:"1px solid var(--border)",transition:"all .15s ease",boxShadow:"0 1px 2px rgba(0,0,0,0.05)",opacity:closed?.7:1}} onMouseEnter={e=>{e.currentTarget.style.boxShadow="0 4px 12px rgba(0,0,0,0.08)";e.currentTarget.style.transform="translateY(-1px)";}} onMouseLeave={e=>{e.currentTarget.style.boxShadow="0 1px 2px rgba(0,0,0,0.05)";e.currentTarget.style.transform="none";}}>
+    <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:4,gap:8}}>
+      <div style={{fontSize:14,fontWeight:600,color:"var(--text)",lineHeight:1.25}}>{l.BorrowerLastName}, {l.BorrowerFirstName}</div>
+      <span style={{fontSize:12,fontWeight:closed?500:600,color:dueColor,background:dueBg,padding:l.DisplayClosingDate?0:"3px 8px",borderRadius:l.DisplayClosingDate?0:999,whiteSpace:"nowrap",lineHeight:1.2}}>{dueText}</span>
+    </div>
+    <div style={{fontSize:13,color:"var(--text-sub)",marginBottom:8,fontWeight:500}}>{fmtCurrency(l.TotalLoanAmount)}</div>
+    {flags.length>0&&<div style={{display:"flex",flexWrap:"wrap",gap:4,marginBottom:8}}>{flags.map((f,i)=><span key={`${f.t}-${i}`} style={{fontSize:10,fontWeight:500,padding:"2px 7px",borderRadius:7,background:f.bg,color:f.c,border:`1px solid ${f.bd}`,whiteSpace:"nowrap",lineHeight:1.2}}>{f.t}</span>)}</div>}
+    <div style={{height:2,borderRadius:999,background:uc.border,opacity:.45}}/>
+  </div>;
+};
+
+// ─── Details View ───────────────────────────────────────
+const DetailsView = ({loans,onCardClick:oc}) => {
+  const [sortCol,setSortCol]=useState("DisplayClosingDate");
+  const [sortDir,setSortDir]=useState("desc");
+  const mloAbbr=(name)=>{if(!name)return"—";const p=name.split(" ");return p.length>=2?p[0][0]+". "+p[p.length-1]:name;};
+  const activeLoans=useMemo(()=>loans.filter(l=>!isClosed(l)),[loans]);
+  const closedLoans=useMemo(()=>loans.filter(l=>isClosed(l)),[loans]);
+  const sortFn=(arr)=>[...arr].sort((a,b)=>{
+    let av=a[sortCol],bv=b[sortCol];
+    if(sortCol==="ConditionsCount"){av=av||0;bv=bv||0;return sortDir==="asc"?av-bv:bv-av;}
+    av=av||"";bv=bv||"";return sortDir==="asc"?String(av).localeCompare(String(bv)):String(bv).localeCompare(String(av));
+  });
+  const sortedActive=useMemo(()=>sortFn(activeLoans),[activeLoans,sortCol,sortDir]);
+  const sortedClosed=useMemo(()=>[...closedLoans].sort((a,b)=>(b.DisplayClosingDate||"").localeCompare(a.DisplayClosingDate||"")),[closedLoans]);
+  const doSort=(col)=>{if(sortCol===col)setSortDir(d=>d==="asc"?"desc":"asc");else{setSortCol(col);setSortDir("asc");}};
+  const arrow=(col)=>sortCol===col?(sortDir==="asc"?" ↑":" ↓"):"";
+  const hStyle={padding:"8px 6px",textAlign:"left",fontSize:10,fontWeight:600,color:"var(--text-dim)",textTransform:"uppercase",letterSpacing:.4,cursor:"pointer",whiteSpace:"nowrap",userSelect:"none",borderBottom:"1px solid var(--border)"};
+  const hStyleStatic={...hStyle,cursor:"default"};
+  const tStyle={padding:"8px 6px",borderBottom:"1px solid var(--border)",fontSize:12,color:"var(--text)",whiteSpace:"nowrap"};
+  const badge=(text,bg,color)=>text?<span key={text} style={{display:"inline-flex",flex:"0 0 auto",fontSize:10,fontWeight:600,padding:"2px 6px",borderRadius:4,background:bg,color,whiteSpace:"nowrap"}}>{text}</span>:null;
+
+  const renderHeaders=()=><tr>
+    <th style={hStyle} onClick={()=>doSort("BorrowerLastName")}>Borrower{arrow("BorrowerLastName")}</th>
+    <th style={hStyle} onClick={()=>doSort("Title")}>Loan #{arrow("Title")}</th>
+    <th style={hStyle} onClick={()=>doSort("Status")}>Status{arrow("Status")}</th>
+    <th style={hStyle} onClick={()=>doSort("Processor")}>Processor{arrow("Processor")}</th>
+    <th style={hStyle} onClick={()=>doSort("LoanOfficer")}>MLO{arrow("LoanOfficer")}</th>
+    <th style={hStyle} onClick={()=>doSort("Lender")}>Lender{arrow("Lender")}</th>
+    <th style={hStyleStatic}>Channel</th>
+    <th style={hStyle} onClick={()=>doSort("PurposeType")}>Purpose{arrow("PurposeType")}</th>
+    <th style={hStyle} onClick={()=>doSort("LoanType")}>Type{arrow("LoanType")}</th>
+    <th style={hStyle} onClick={()=>doSort("LockExpirationDate")}>Lock Exp{arrow("LockExpirationDate")}</th>
+    <th style={hStyle} onClick={()=>doSort("DisplayClosingDate")}>Closing{arrow("DisplayClosingDate")}</th>
+    <th style={hStyle} onClick={()=>doSort("ConditionsCount")}>Conds{arrow("ConditionsCount")}</th>
+    <th style={{...hStyleStatic,width:220,minWidth:220}}>Flags</th>
+  </tr>;
+
+  const renderRow=(l)=>{
+    const urg2=urgency(l.DisplayClosingDate,l.Status);const uc=UC[urg2];
+    const lockUrg2=lockUrgency(l.LockExpirationDate);const luc2=UC[lockUrg2];
+    const closed=isClosed(l);const vvoe=getEffectiveVVOE(l);
+    const sc2=STATUS_COLORS[l.Status]||STATUS_COLORS.Closed;
+    const flags=[];
+    if(isOutsideTitle(l)) flags.push({t:"Outside Title",bg:"rgba(168,85,247,0.08)",c:"#7c3aed"});
+    if(l.NewConstruction) flags.push({t:"New Const",bg:"rgba(6,182,212,0.08)",c:"#0891b2"});
+    if(needsCDFlag(l)) flags.push({t:"ICD",bg:"rgba(234,179,8,0.08)",c:"#ca8a04"});
+    if(!l.IncomeFinalized&&!closed) flags.push({t:"Income TBD",bg:"rgba(245,158,11,0.08)",c:"#d97706"});
+    if(vvoe&&vvoe!=="N/A") flags.push({t:vvoe,bg:vvoe==="VVOE Complete"?"rgba(34,197,94,0.08)":vvoe==="VVOE Working"?"rgba(245,158,11,0.08)":"rgba(220,38,38,0.08)",c:vvoe==="VVOE Complete"?"#16a34a":vvoe==="VVOE Working"?"#d97706":"#dc2626"});
+    if(l.Notes) flags.push({t:"Notes",bg:"rgba(59,130,246,0.08)",c:"#2563eb"});
+    return <tr key={l.Title} onClick={()=>oc(l)} style={{cursor:"pointer"}} onMouseEnter={e=>e.currentTarget.style.background="var(--bg-alt)"} onMouseLeave={e=>e.currentTarget.style.background=""}>
+      <td style={{...tStyle,fontWeight:600}}>{l.BorrowerLastName}, {l.BorrowerFirstName}</td>
+      <td style={tStyle}>#{l.Title}</td>
+      <td style={tStyle}><span style={{fontSize:10,fontWeight:600,padding:"2px 7px",borderRadius:4,background:sc2.bg,color:sc2.text}}>{l.Status}</span></td>
+      <td style={tStyle}>{shortProc(l.Processor)}</td>
+      <td style={tStyle}>{mloAbbr(l.LoanOfficer)}</td>
+      <td style={tStyle}>{getMergedLender(l)}</td>
+      <td style={tStyle}>{isBkr(l)?"Broker":"Corres"}</td>
+      <td style={tStyle}>{purposeShort(l.PurposeType)}</td>
+      <td style={tStyle}>{loanTypeShort(l.LoanType)}</td>
+      <td style={tStyle}>{l.LockExpirationDate?<span style={{fontWeight:(lockUrg2==="overdue"||lockUrg2==="urgent")?600:500,color:(lockUrg2==="overdue"||lockUrg2==="urgent")?"#dc2626":"var(--text)",fontSize:12}}>{fmt(l.LockExpirationDate)}</span>:"—"}</td>
+      <td style={tStyle}><span style={{fontWeight:(urg2==="overdue"||urg2==="urgent")?600:500,color:(urg2==="overdue"||urg2==="urgent")?"#dc2626":"var(--text)",fontSize:12}}>{l.DisplayClosingDate?fmt(l.DisplayClosingDate):"TBD"}</span></td>
+      <td style={tStyle}>{l.ConditionsCount>0?<span style={{fontWeight:600}}>{l.ConditionsCount}</span>:closed?"—":"✓"}</td>
+      <td style={{...tStyle,whiteSpace:"nowrap",minWidth:220,width:220}}><div style={{display:"flex",flexDirection:"row",alignItems:"center",flexWrap:"nowrap",gap:3,overflowX:"auto",overflowY:"hidden",whiteSpace:"nowrap"}}>{flags.map(f=>badge(f.t,f.bg,f.c))}</div></td>
+    </tr>;
+  };
+
+  return <div style={{padding:"16px 20px",overflowY:"auto",height:"calc(100vh - 145px)"}}>
+    <div style={{background:"var(--bg-card)",borderRadius:"var(--radius-lg)",border:"1px solid var(--border)",overflow:"hidden",marginBottom:20,boxShadow:"var(--shadow)"}}>
+      <div style={{overflowX:"auto"}}><table style={{width:"100%",borderCollapse:"collapse",tableLayout:"auto"}}><thead>{renderHeaders()}</thead><tbody>{sortedActive.map(renderRow)}</tbody></table>
+        {sortedActive.length===0&&<div style={{textAlign:"center",color:"var(--text-muted)",fontSize:13,padding:32}}>No active loans match current filters</div>}
+      </div>
+    </div>
+    {sortedClosed.length>0&&<>
+      <div style={{fontSize:12,fontWeight:600,color:"var(--text-dim)",marginBottom:10,display:"flex",alignItems:"center",gap:8,textTransform:"uppercase",letterSpacing:.4}}>
+        <span>Closed This Month ({sortedClosed.length})</span>
+      </div>
+      <div style={{background:"var(--bg-card)",borderRadius:"var(--radius-lg)",border:"1px solid var(--border)",overflow:"hidden",opacity:.7,boxShadow:"var(--shadow)"}}>
+        <div style={{overflowX:"auto"}}><table style={{width:"100%",borderCollapse:"collapse",tableLayout:"auto"}}><thead>{renderHeaders()}</thead><tbody>{sortedClosed.map(renderRow)}</tbody></table></div>
+      </div>
+    </>}
+  </div>;
+};
+
+// ─── Calendar View ──────────────────────────────────────
+const getFederalHolidays = (year) => {
+  const h=[];
+  h.push({date:`${year}-01-01`,name:"New Year's Day"});
+  let mlk=new Date(year,0,1);while(mlk.getDay()!==1)mlk.setDate(mlk.getDate()+1);mlk.setDate(mlk.getDate()+14);h.push({date:mlk.toISOString().slice(0,10),name:"MLK Day"});
+  let pd=new Date(year,1,1);while(pd.getDay()!==1)pd.setDate(pd.getDate()+1);pd.setDate(pd.getDate()+14);h.push({date:pd.toISOString().slice(0,10),name:"Presidents' Day"});
+  let mem=new Date(year,4,31);while(mem.getDay()!==1)mem.setDate(mem.getDate()-1);h.push({date:mem.toISOString().slice(0,10),name:"Memorial Day"});
+  h.push({date:`${year}-06-19`,name:"Juneteenth"});
+  h.push({date:`${year}-07-04`,name:"Independence Day"});
+  let lab=new Date(year,8,1);while(lab.getDay()!==1)lab.setDate(lab.getDate()+1);h.push({date:lab.toISOString().slice(0,10),name:"Labor Day"});
+  let col2=new Date(year,9,1);while(col2.getDay()!==1)col2.setDate(col2.getDate()+1);col2.setDate(col2.getDate()+7);h.push({date:col2.toISOString().slice(0,10),name:"Columbus Day"});
+  h.push({date:`${year}-11-11`,name:"Veterans Day"});
+  let thx=new Date(year,10,1);while(thx.getDay()!==4)thx.setDate(thx.getDate()+1);thx.setDate(thx.getDate()+21);h.push({date:thx.toISOString().slice(0,10),name:"Thanksgiving"});
+  h.push({date:`${year}-12-25`,name:"Christmas"});
+  return h;
+};
+
+const CalendarView = ({loans,onCardClick:oc}) => {
+  const now=new Date();const [calMonth,setCalMonth]=useState(now.getMonth());const [calYear,setCalYear]=useState(now.getFullYear());
+  const monthName=["January","February","March","April","May","June","July","August","September","October","November","December"][calMonth];
+  const daysInMonth=new Date(calYear,calMonth+1,0).getDate();
+  const holidays=useMemo(()=>getFederalHolidays(calYear),[calYear]);
+  const holidayMap=useMemo(()=>{const m={};holidays.forEach(h=>{const d=new Date(h.date);if(d.getMonth()===calMonth)m[d.getDate()]=h.name;});return m;},[holidays,calMonth]);
+  const loansByDay=useMemo(()=>{const m={};loans.forEach(l=>{if(!l.DisplayClosingDate)return;const d=new Date(l.DisplayClosingDate);if(d.getMonth()===calMonth&&d.getFullYear()===calYear)if(!m[d.getDate()])m[d.getDate()]=[l];else m[d.getDate()].push(l);});return m;},[loans,calMonth,calYear]);
+  const todayDate=now.getDate();const isToday=(d)=>now.getMonth()===calMonth&&now.getFullYear()===calYear&&d===todayDate;
+  const prev=()=>{if(calMonth===0){setCalMonth(11);setCalYear(calYear-1);}else setCalMonth(calMonth-1);};
+  const next=()=>{if(calMonth===11){setCalMonth(0);setCalYear(calYear+1);}else setCalMonth(calMonth+1);};
+
+  // Build business-week grid
+  const weeks=[];let week=[];
+  const firstDay=new Date(calYear,calMonth,1).getDay(); // 0=Sun
+  // Pad beginning: Mon=0, Tue=1...Fri=4
+  const mondayOffset=firstDay===0?6:firstDay-1; // How many weekdays to skip before the 1st
+  for(let p=0;p<mondayOffset&&mondayOffset<5;p++) week.push(null);
+  for(let d=1;d<=daysInMonth;d++){
+    const dow=new Date(calYear,calMonth,d).getDay();
+    if(dow===0||dow===6) continue; // skip weekends
+    week.push(d);
+    if(dow===5||d===daysInMonth){while(week.length<5)week.push(null);weeks.push(week);week=[];}
+  }
+  if(week.length>0){while(week.length<5)week.push(null);weeks.push(week);}
+
+  return <div style={{padding:"16px 20px"}}>
+    <div style={{background:"var(--bg-card)",borderRadius:"var(--radius-lg)",border:"1px solid var(--border)",overflow:"hidden",boxShadow:"var(--shadow)"}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"14px 20px",borderBottom:"1px solid var(--border)"}}>
+        <button onClick={prev} style={{background:"transparent",color:"var(--text)",border:"1px solid var(--border)",borderRadius:"var(--radius)",padding:"6px 14px",cursor:"pointer",fontSize:13,fontWeight:500,transition:"all .15s ease"}}>← Prev</button>
+        <div style={{fontSize:16,fontWeight:700,color:"var(--text)",letterSpacing:-.2}}>{monthName} {calYear}</div>
+        <button onClick={next} style={{background:"transparent",color:"var(--text)",border:"1px solid var(--border)",borderRadius:"var(--radius)",padding:"6px 14px",cursor:"pointer",fontSize:13,fontWeight:500,transition:"all .15s ease"}}>Next →</button>
+      </div>
+      <table style={{width:"100%",borderCollapse:"collapse",tableLayout:"fixed"}}>
+        <thead><tr>{["Mon","Tue","Wed","Thu","Fri"].map(d=><th key={d} style={{padding:"10px 8px",textAlign:"center",fontSize:10,fontWeight:600,color:"var(--text-dim)",textTransform:"uppercase",letterSpacing:.4,borderBottom:"1px solid var(--border)"}}>{d}</th>)}</tr></thead>
+        <tbody>{weeks.map((w,wi)=><tr key={wi}>{w.map((d,di)=>{
+          const dl=d?loansByDay[d]||[]:[];const today=d&&isToday(d);const hol=d?holidayMap[d]:null;
+          return <td key={di} style={{border:"1px solid var(--border)",padding:5,verticalAlign:"top",height:105,background:hol?"rgba(245,158,11,0.04)":today?"var(--accent-bg)":d?"var(--bg-card)":"var(--bg-alt)",position:"relative"}}>
+            {d&&<div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:hol?2:4}}>
+              <span style={{fontSize:11,fontWeight:today?700:500,color:today?"var(--accent)":"var(--text-dim)",paddingLeft:2}}>{d}</span>
+            </div>}
+            {hol&&<div style={{fontSize:9,color:"#d97706",fontWeight:600,marginBottom:3,paddingLeft:2}}>{hol}</div>}
+            {dl.map(l=>{const sc2=STATUS_COLORS[l.Status]||STATUS_COLORS.Closed;return <div key={l.Title} onClick={()=>oc(l)} style={{background:sc2.bg,color:sc2.text,fontSize:10,fontWeight:600,padding:"3px 5px",borderRadius:4,marginBottom:2,cursor:"pointer",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",borderLeft:`2px solid ${sc2.border}`,transition:"opacity .15s ease"}} title={`${l.BorrowerLastName}, ${l.BorrowerFirstName} - ${l.Status}`}>{l.BorrowerLastName}, {l.BorrowerFirstName}</div>;})}
+          </td>;
+        })}</tr>)}</tbody>
+      </table>
+    </div>
+  </div>;
+};
+
+// ─── Filter Pill ────────────────────────────────────────
+const FP = ({opts,val,onChange:oc2,counts,field,labelFn}) => {
+  const [open,setOpen]=useState(false);const ref=useRef(null);
+  useEffect(()=>{const h=e=>{if(ref.current&&!ref.current.contains(e.target))setOpen(false);};document.addEventListener("mousedown",h);return()=>document.removeEventListener("mousedown",h);},[]);
+  const dispVal=val==="All"?(field==="Processor"?"Processor":field==="LoanOfficer"?"MLO":"Month"):(labelFn?labelFn(val):val);
+  return <div ref={ref} style={{position:"relative"}}>
+    <button onClick={()=>setOpen(!open)} style={{padding:"6px 14px",border:`1px solid ${val!=="All"?"var(--accent)":"var(--border)"}`,borderRadius:20,fontSize:12,cursor:"pointer",display:"flex",alignItems:"center",gap:4,background:val!=="All"?"var(--accent)":"transparent",color:val!=="All"?"#fff":"var(--text-sub)",whiteSpace:"nowrap",fontWeight:500,transition:"all .15s ease"}}>{dispVal} ▾</button>
+    {open&&<div style={{position:"absolute",top:"100%",left:0,marginTop:4,background:"var(--bg-card)",border:"1px solid var(--border)",borderRadius:"var(--radius)",boxShadow:"var(--shadow-lg)",zIndex:50,minWidth:200,maxHeight:280,overflowY:"auto",padding:4}}>
+      {opts.map(opt=>{const c=opt==="All"?counts.length:counts.filter(l=>l[field]===opt).length;const v=opt==="All"?counts.reduce((s,l)=>s+(l.TotalLoanAmount||0),0):counts.filter(l=>l[field]===opt).reduce((s,l)=>s+(l.TotalLoanAmount||0),0);
+        const optLabel=opt==="All"?(field==="Processor"?"Processor":field==="LoanOfficer"?"MLO":"Month"):(labelFn?labelFn(opt):opt);
+        return <button key={opt} onClick={()=>{oc2(opt);setOpen(false);}} style={{display:"flex",justifyContent:"space-between",width:"100%",padding:"8px 12px",border:"none",background:opt===val?"var(--accent-bg)":"transparent",cursor:"pointer",fontSize:12,color:"var(--text)",textAlign:"left",gap:8,borderRadius:6,fontWeight:opt===val?600:400}} onMouseEnter={e=>{if(opt!==val)e.target.style.background="var(--bg-hover)";}} onMouseLeave={e=>{if(opt!==val)e.target.style.background="transparent";}}><span>{optLabel}</span><span style={{color:"var(--text-dim)",whiteSpace:"nowrap",fontSize:11}}>{c} · {fmtVol(v)}</span></button>;
+      })}
+    </div>}
+  </div>;
+};
+
+// ═══════════════════════════════════════════════════════════
+// MAIN APP
+// ═══════════════════════════════════════════════════════════
+function App() {
+  const [authState, setAuthState] = useState("checking"); // checking | unauthenticated | authenticated
+  const [loans, setLoans] = useState([]);
+  const [condMap, setCondMap] = useState({});
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [lastSync, setLastSync] = useState(null);
+  const [sel, setSel] = useState(null);
+  const [fProc, setFProc] = useState("All");
+  const [fMLO, setFMLO] = useState("All");
+  const [fMonth, setFMonth] = useState("All");
+  const [search, setSearch] = useState("");
+  const [view, setView] = useState("pipeline");
+  const [myPipeline, setMyPipeline] = useState(false);
+  const [statFilter, setStatFilter] = useState(null); // null | "active" | "soon" | "urgent" | "closed"
+  const [darkMode, setDarkMode] = useState(() => window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+
+  // Apply dark mode to document root
+  useEffect(() => {
+    document.documentElement.setAttribute('data-dark', darkMode);
+  }, [darkMode]);
+
+  // Escape key closes detail panel
+  useEffect(() => {
+    const handleKey = (e) => { if (e.key === "Escape") setSel(null); };
+    document.addEventListener("keydown", handleKey);
+    return () => document.removeEventListener("keydown", handleKey);
+  }, []);
+
+  // Auth check on mount
+  useEffect(() => {
+    async function init() {
+      try {
+        await msalInstance.initialize();
+        // Handle redirect callback
+        const response = await msalInstance.handleRedirectPromise();
+        const accounts = msalInstance.getAllAccounts();
+        if (accounts.length > 0) {
+          setAuthState("authenticated");
+        } else {
+          setAuthState("unauthenticated");
+        }
+      } catch (e) {
+        console.error("Auth init error:", e);
+        setAuthState("unauthenticated");
+      }
+    }
+    init();
+  }, []);
+
+  // Load data when authenticated
+  const loadData = useCallback(async () => {
+    try {
+      setLoading(true);
+      const data = await fetchPipelineData();
+      setLoans(data.loans);
+      setCondMap(data.condMap);
+      setLastSync(data.lastModified);
+      setError(null);
+    } catch (e) {
+      console.error("Data load error:", e);
+      setError(e.message);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (authState === "authenticated") loadData();
+  }, [authState, loadData]);
+
+  // Auto-refresh
+  useEffect(() => {
+    if (authState !== "authenticated") return;
+    const interval = setInterval(loadData, CONFIG.refreshInterval);
+    return () => clearInterval(interval);
+  }, [authState, loadData]);
+
+  const handleLogin = async () => {
+    try {
+      await msalInstance.loginPopup(loginRequest);
+      setAuthState("authenticated");
+    } catch (e) {
+      setError(e.message);
+    }
+  };
+
+  // Auth screen
+  if (authState === "checking") return <div className="loading"><div className="spinner"/><div>Initializing...</div></div>;
+  if (authState === "unauthenticated") return (
+    <div className="auth-screen">
+      <div style={{fontSize:24,fontWeight:700,color:"var(--accent)"}}>Office Pipeline</div>
+      <div className="auth-msg">Sign in with your DCM account to access the pipeline</div>
+      <button className="auth-btn" onClick={handleLogin}>Sign In with Microsoft</button>
+      {error && <div className="auth-err">{error}</div>}
+    </div>
+  );
+
+  // Loading
+  if (loading && loans.length === 0) return <div className="loading"><div className="spinner"/><div>Loading pipeline data...</div></div>;
+
+  // Data loaded — compute filters and stats
+  const account = msalInstance.getAllAccounts()[0];
+  const userName = account?.name || "";
+  const procs = [...new Set(loans.map(l => shortProc(l.Processor)).filter(Boolean))].sort();
+  const mlos = [...new Set(loans.map(l => l.LoanOfficer))].sort();
+  const months = [...new Set(loans.filter(l => l.DisplayClosingDate).map(l => getMonthKey(l.DisplayClosingDate)))].sort((a, b) => {
+    const la = loans.find(l => getMonthKey(l.DisplayClosingDate) === a);
+    const lb = loans.find(l => getMonthKey(l.DisplayClosingDate) === b);
+    return getMonthSort(la?.DisplayClosingDate).localeCompare(getMonthSort(lb?.DisplayClosingDate));
+  });
+
+  const filtered = loans.filter(l => {
+    if (myPipeline && userName) {
+      const nameMatch = l.LoanOfficer === userName || l.Processor === userName || shortProc(l.Processor) === userName.split(" ")[0];
+      if (!nameMatch) return false;
+    }
+    if (fProc !== "All" && shortProc(l.Processor) !== fProc) return false;
+    if (fMLO !== "All" && l.LoanOfficer !== fMLO) return false;
+    if (fMonth !== "All") {
+      const loanDate = l.DisplayClosingDate ? new Date(l.DisplayClosingDate) : null;
+      const inMonth = loanDate && getMonthKey(l.DisplayClosingDate) === fMonth;
+      const monthStart = getMonthStart(fMonth);
+      // Active loans with closing date before selected month are overdue — always include
+      const isOverdue = l.Status !== "Closed" && loanDate && loanDate < monthStart;
+      if (!inMonth && !isOverdue) return false;
+    }
+    if (search) { const s = search.toLowerCase(); if (!`${l.BorrowerFirstName} ${l.BorrowerLastName} ${l.Title} ${l.LoanOfficer} ${l.Processor}`.toLowerCase().includes(s)) return false; }
+    // Stat filter — applied after other filters
+    if (statFilter === "closed" && !isClosed(l)) return false;
+    if (statFilter === "urgent") { const d = diffDays(l.DisplayClosingDate); if (isClosed(l) || d === null || d > 3) return false; }
+    if (statFilter === "soon") { const d = diffDays(l.DisplayClosingDate); if (isClosed(l) || d === null || d > 7) return false; }
+    return true;
+  });
+
+  const columns = {};
+  STATUS_ORDER.forEach(s => columns[s] = []);
+  filtered.forEach(l => {
+    const mappedStatus = l.Status === "Post Closing" ? "Closed" : l.Status;
+    if (columns[mappedStatus]) columns[mappedStatus].push(l);
+  });
+  Object.values(columns).forEach(a => a.sort((x, y) => {
+    if (!x.DisplayClosingDate && !y.DisplayClosingDate) return 0;
+    if (!x.DisplayClosingDate) return 1;
+    if (!y.DisplayClosingDate) return -1;
+    return new Date(x.DisplayClosingDate) - new Date(y.DisplayClosingDate);
+  }));
+
+  const active = filtered.filter(l => !isClosed(l));
+  const closedN = filtered.filter(l => isClosed(l)).length;
+  const urgN = active.filter(l => { const d = diffDays(l.DisplayClosingDate); return d !== null && d <= 3; }).length;
+  const soonN = active.filter(l => { const d = diffDays(l.DisplayClosingDate); return d !== null && d > 3 && d <= 7; }).length;
+  const vol = active.reduce((s, l) => s + (l.TotalLoanAmount || 0), 0);
+
+  const syncLabel = lastSync ? `Pipeline data as of ${lastSync.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}` : "Syncing...";
+  const viewBtn = (id, label) => <button onClick={() => setView(id)} style={{ padding: "6px 14px", fontSize: 12, border: "none", cursor: "pointer", fontWeight: 600, background: view === id ? "var(--accent)" : "transparent", color: view === id ? "#fff" : "var(--text-sub)", borderRadius:6, transition:"all .15s ease" }}>{label}</button>;
+
+  return <div style={{fontFamily:"'Inter','Segoe UI',-apple-system,sans-serif",background:"var(--bg)",minHeight:"100vh",color:"var(--text)"}}>
+    {/* Header */}
+    <div style={{background:"var(--bg-header)",padding:"12px 24px",borderBottom:"1px solid var(--border)",display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:12}}>
+      <div>
+        <div style={{display:"flex",alignItems:"center",gap:10}}>
+          <span style={{fontSize:10,fontWeight:700,letterSpacing:1.2,color:"var(--accent)",background:"var(--accent-bg)",padding:"3px 8px",borderRadius:4,textTransform:"uppercase"}}>DCM</span>
+          <span style={{fontSize:18,fontWeight:700,color:"var(--text)",letterSpacing:-.4}}>Pipeline</span>
+        </div>
+        <div style={{fontSize:11,color:"var(--text-dim)",marginTop:3}}>{syncLabel} · {filtered.length} loans shown{loading && " · Refreshing..."}</div>
+      </div>
+      <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
+        <input type="text" placeholder="Search..." value={search} onChange={e => setSearch(e.target.value)} style={{padding:"7px 12px",border:"1px solid var(--border)",borderRadius:"var(--radius)",fontSize:13,width:180,outline:"none",background:"var(--input-bg)",color:"var(--text)",transition:"border-color .15s ease"}} onFocus={e => e.target.style.borderColor = "var(--accent)"} onBlur={e => e.target.style.borderColor = "var(--border)"}/>
+        <FP opts={["All", ...procs]} val={fProc} onChange={setFProc} counts={loans.map(l => ({...l, Processor: shortProc(l.Processor)}))} field="Processor"/>
+        <FP opts={["All", ...mlos]} val={fMLO} onChange={setFMLO} counts={loans} field="LoanOfficer"/>
+        <FP opts={["All", ...months]} val={fMonth} onChange={setFMonth} counts={loans.filter(l => l.DisplayClosingDate).map(l => ({...l, closingMonth: getMonthKey(l.DisplayClosingDate)}))} field="closingMonth"/>
+           <button onClick={() => setMyPipeline(!myPipeline)} aria-pressed={myPipeline} aria-label={`My Pipeline: ${myPipeline ? "On" : "Off"}`} title={myPipeline ? "Showing my loans — click to show all" : "Showing all loans — click to show mine"} style={{display:"inline-flex",alignItems:"center",gap:10,padding:"4px 12px",border:`1px solid ${myPipeline?"var(--accent)":"var(--border-mid)"}`,borderRadius:10,fontSize:12,cursor:"pointer",fontWeight:600,background:myPipeline?"var(--accent-bg)":"var(--bg-alt)",color:"var(--text)",whiteSpace:"nowrap",transition:"all .15s ease"}}><span>My Pipeline</span><span aria-hidden="true" style={{width:30,height:18,borderRadius:999,background:myPipeline?"var(--accent)":"#c4c7ce",position:"relative",transition:"background .15s ease"}}><span style={{position:"absolute",top:2,left:2,width:14,height:14,borderRadius:"50%",background:"#fff",boxShadow:"0 1px 2px rgba(0,0,0,.2)",transform:myPipeline?"translateX(12px)":"translateX(0)",transition:"transform .15s ease"}} /></span></button>        <div style={{display:"flex",gap:2,background:"var(--bg-alt)",borderRadius:"var(--radius)",padding:2}}>
+          {viewBtn("pipeline", "Pipeline")}
+          {viewBtn("calendar", "Calendar")}
+          {viewBtn("details", "Details")}
+        </div>
+        <button onClick={loadData} title="Refresh data" style={{background:"transparent",border:"1px solid var(--border)",borderRadius:"var(--radius)",padding:"6px 10px",cursor:"pointer",fontSize:14,color:"var(--text-dim)",transition:"all .15s ease"}}>↻</button>
+        <button onClick={() => setDarkMode(!darkMode)} title={darkMode ? "Switch to light mode" : "Switch to dark mode"} style={{background:"transparent",border:"1px solid var(--border)",borderRadius:"var(--radius)",padding:"6px 10px",cursor:"pointer",fontSize:14,transition:"all .15s ease"}}>{darkMode ? "☀️" : "🌙"}</button>
+      </div>
+    </div>
+
+    {/* Stats Bar */}
+    <div style={{background:"var(--bg-header)",padding:"8px 24px",borderBottom:"1px solid var(--border)",display:"flex",gap:8,flexWrap:"wrap",alignItems:"center"}}>
+      <St n={active.length} c="var(--accent)" l="Active pipeline" active={!statFilter} onClick={() => setStatFilter(null)}/>
+      <St n={soonN} c="#ea580c" l="Closing within 7 days" active={statFilter==="soon"} onClick={() => setStatFilter(statFilter==="soon"?null:"soon")}/>
+      <St n={urgN} c="#dc2626" l="Closing within 3 days" active={statFilter==="urgent"} onClick={() => setStatFilter(statFilter==="urgent"?null:"urgent")}/>
+      <St n={closedN} c="#16a34a" l="Closed this month" active={statFilter==="closed"} onClick={() => setStatFilter(statFilter==="closed"?null:"closed")}/>
+      {statFilter && <button onClick={() => setStatFilter(null)} style={{fontSize:11,color:"var(--text-dim)",background:"var(--bg-alt)",border:"1px solid var(--border)",borderRadius:20,padding:"3px 12px",cursor:"pointer",fontWeight:500,transition:"all .15s ease"}}>Clear filter</button>}
+      <div style={{marginLeft:"auto",fontSize:13,color:"var(--text)"}}><span style={{fontWeight:700}}>{fmtVol(vol)}</span><span style={{color:"var(--text-dim)",fontSize:11,marginLeft:4}}>pipeline volume</span></div>
+    </div>
+
+    {/* Error banner */}
+    {error && <div style={{background:"var(--error-bg)",color:"var(--error-text)",padding:"10px 24px",fontSize:12,fontWeight:500,borderBottom:"1px solid var(--border)"}}>⚠ Error loading data: {error} <button onClick={loadData} style={{marginLeft:8,background:"var(--error-text)",color:"#fff",border:"none",borderRadius:6,padding:"3px 10px",cursor:"pointer",fontSize:11,fontWeight:600}}>Retry</button></div>}
+
+    {/* Views */}
+    {view === "pipeline" && <div style={{display:"flex",gap:12,padding:"16px 16px",overflowX:"auto",alignItems:"flex-start"}}>
+      {STATUS_ORDER.map(status => { const sc = STATUS_COLORS[status]; const ls = columns[status]; return <div key={status} style={{background:"var(--bg-card)",borderRadius:"var(--radius-lg)",minWidth:250,maxWidth:250,display:"flex",flexDirection:"column",border:"1px solid var(--border)",flexShrink:0,boxShadow:"var(--shadow)"}}>
+        <div style={{padding:"12px 14px",display:"flex",alignItems:"center",justifyContent:"space-between",borderBottom:`2px solid ${sc.border}`,background:sc.bg,borderTopLeftRadius:"var(--radius-lg)",borderTopRightRadius:"var(--radius-lg)",position:"sticky",top:0,zIndex:2}}><span style={{fontSize:11,fontWeight:600,textTransform:"uppercase",letterSpacing:.5,color:sc.text}}>{status}</span><span style={{fontSize:11,fontWeight:500,color:sc.text,opacity:.6}}>{ls.length}</span></div>
+        <div style={{padding:10,display:"flex",flexDirection:"column",gap:8,background:"var(--bg-alt)",borderBottomLeftRadius:"var(--radius-lg)",borderBottomRightRadius:"var(--radius-lg)"}}>
+          {ls.map(l => <Card key={l.Title} loan={l} onClick={setSel}/>)}
+          {ls.length === 0 && <div style={{textAlign:"center",color:"var(--text-muted)",fontSize:12,padding:24}}>No loans</div>}
+        </div>
+      </div>; })}
+    </div>}
+
+    {view === "calendar" && <CalendarView loans={filtered} onCardClick={setSel}/>}
+    {view === "details" && <DetailsView loans={filtered} onCardClick={setSel}/>}
+
+    {/* Detail Panel */}
+    {sel && <DetailPanel loan={sel} condMap={condMap} onClose={() => setSel(null)} onSaveNotes={saveNotes} onSaveVVOE={saveVVOE}/>}
+  </div>;
+}
+
+// ═══════════════════════════════════════════════════════════
+// MOUNT
+// ═══════════════════════════════════════════════════════════
+const root = ReactDOM.createRoot(document.getElementById("root"));
+root.render(<App />);
+</script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+>>>>>>> f8a8bdec1c921ff63e62d6e962fd95e79874bca8
