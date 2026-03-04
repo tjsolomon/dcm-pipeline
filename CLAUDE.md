@@ -79,7 +79,7 @@ The app READS pipeline and conditions data, and WRITES Notes and VVOEStatus back
 - No green for "normal" dates — green only used for completed states
 - Status column colors: Processing=blue, Submission=purple, Approved=teal, Conditions=orange, CTC=green, Closed=gray
 - MLO and Processor colored badges (muted pastels to reduce visual noise)
-- Simplified Kanban cards: borrower name, closing date, loan amount, and ONE contextual flag (VVOE > conditions > lock)
+- Simplified Kanban cards: borrower name, closing date, loan type · purpose · lender (· Broker), and contextual flags (VVOE color-coded > conditions > lock)
 - "DCM" brand mark in header
 
 ### Stats Bar
