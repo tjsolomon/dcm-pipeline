@@ -630,7 +630,8 @@
 
 
       if (needsCDFlag(l)) flags.push({ t: "ICD", bg: "rgba(139,92,246,0.08)", c: "#7c3aed", bd: "rgba(139,92,246,0.3)" });
-      if (!l.IncomeFinalized && !closed) flags.push({ t: "Income TBD", bg: "rgba(245,158,11,0.08)", c: "#d97706", bd: "rgba(245,158,11,0.35)" });
+      const allowedIncomeTBDStatuses = ["Approved", "Condition Submission", "Clear To Close"];
+      if (!l.IncomeFinalized && allowedIncomeTBDStatuses.includes(l.Status)) flags.push({ t: "Income TBD", bg: "rgba(245,158,11,0.08)", c: "#d97706", bd: "rgba(245,158,11,0.35)" });
       if (vvoe && vvoe !== "N/A") flags.push({ t: "VVOE", bg: vvoe === "VVOE Complete" ? "rgba(34,197,94,0.1)" : vvoe === "VVOE Working" ? "rgba(245,158,11,0.1)" : "rgba(239,68,68,0.1)", c: vvoe === "VVOE Complete" ? "#059669" : vvoe === "VVOE Working" ? "#d97706" : "#dc2626", bd: vvoe === "VVOE Complete" ? "rgba(34,197,94,0.35)" : vvoe === "VVOE Working" ? "rgba(245,158,11,0.35)" : "rgba(239,68,68,0.3)" });
       if (l.LockExpirationDate && l.DisplayClosingDate && new Date(l.LockExpirationDate) < new Date(l.DisplayClosingDate)) flags.push({ t: "Lock", bg: "rgba(220,38,38,0.08)", c: "#dc2626", bd: "rgba(220,38,38,0.3)" });
 
@@ -664,7 +665,7 @@
       const hStyle = { padding: "8px 6px", textAlign: "left", fontSize: 10, fontWeight: 600, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: .4, cursor: "pointer", whiteSpace: "nowrap", userSelect: "none", borderBottom: "1px solid var(--border)" };
       const hStyleStatic = { ...hStyle, cursor: "default" };
       const tStyle = { padding: "4px 6px", borderBottom: "1px solid var(--border)", fontSize: 12, color: "var(--text)", whiteSpace: "nowrap" };
-      const badge = (text, bg, color) => text ? <span key={text} style={{ display: "inline-flex", flex: "0 0 auto", fontSize: 10, fontWeight: 600, padding: "2px 6px", borderRadius: 4, background: bg, color, whiteSpace: "nowrap" }}>{text}</span> : null;
+      const badge = (text, bg, color, bd) => text ? <span key={text} style={{ display: "inline-flex", flex: "0 0 auto", fontSize: 10, fontWeight: 600, padding: "2px 6px", borderRadius: 4, background: bg, color, border: bd ? `1px solid ${bd}` : "1px solid transparent", whiteSpace: "nowrap" }}>{text}</span> : null;
 
       const renderHeaders = () => <tr>
         <th style={hStyle} onClick={() => doSort("BorrowerLastName")}>Borrower{arrow("BorrowerLastName")}</th>
@@ -690,10 +691,11 @@
         const flags = [];
         if (isOutsideTitle(l)) flags.push({ t: "Outside Title", bg: "rgba(168,85,247,0.08)", c: "#7c3aed" });
         if (l.NewConstruction) flags.push({ t: "New Const", bg: "rgba(6,182,212,0.08)", c: "#0891b2" });
-        if (needsCDFlag(l)) flags.push({ t: "ICD", bg: "rgba(234,179,8,0.08)", c: "#ca8a04" });
-        if (!l.IncomeFinalized && !closed) flags.push({ t: "Income TBD", bg: "rgba(245,158,11,0.08)", c: "#d97706" });
-        if (vvoe && vvoe !== "N/A") flags.push({ t: "VVOE", bg: vvoe === "VVOE Complete" ? "rgba(34,197,94,0.08)" : vvoe === "VVOE Working" ? "rgba(245,158,11,0.08)" : "rgba(220,38,38,0.08)", c: vvoe === "VVOE Complete" ? "#16a34a" : vvoe === "VVOE Working" ? "#d97706" : "#dc2626" });
-        if (l.LockExpirationDate && l.DisplayClosingDate && new Date(l.LockExpirationDate) < new Date(l.DisplayClosingDate)) flags.push({ t: "Lock", bg: "rgba(220,38,38,0.08)", c: "#dc2626" });
+        if (needsCDFlag(l)) flags.push({ t: "ICD", bg: "rgba(139,92,246,0.08)", c: "#7c3aed", bd: "rgba(139,92,246,0.3)" });
+        const allowedIncomeTBDStatuses = ["Approved", "Condition Submission", "Clear To Close"];
+        if (!l.IncomeFinalized && allowedIncomeTBDStatuses.includes(l.Status)) flags.push({ t: "Income TBD", bg: "rgba(245,158,11,0.08)", c: "#d97706", bd: "rgba(245,158,11,0.35)" });
+        if (vvoe && vvoe !== "N/A") flags.push({ t: "VVOE", bg: vvoe === "VVOE Complete" ? "rgba(34,197,94,0.1)" : vvoe === "VVOE Working" ? "rgba(245,158,11,0.1)" : "rgba(239,68,68,0.1)", c: vvoe === "VVOE Complete" ? "#059669" : vvoe === "VVOE Working" ? "#d97706" : "#dc2626", bd: vvoe === "VVOE Complete" ? "rgba(34,197,94,0.35)" : vvoe === "VVOE Working" ? "rgba(245,158,11,0.35)" : "rgba(239,68,68,0.3)" });
+        if (l.LockExpirationDate && l.DisplayClosingDate && new Date(l.LockExpirationDate) < new Date(l.DisplayClosingDate)) flags.push({ t: "Lock", bg: "rgba(220,38,38,0.08)", c: "#dc2626", bd: "rgba(220,38,38,0.3)" });
         if (l.Notes) flags.push({ t: "Notes", bg: "rgba(59,130,246,0.08)", c: "#2563eb" });
         return <tr key={l.Title} onClick={() => oc(l)} style={{ cursor: "pointer" }} onMouseEnter={e => e.currentTarget.style.background = "var(--bg-alt)"} onMouseLeave={e => e.currentTarget.style.background = ""}>
           <td style={{ ...tStyle, fontWeight: 600 }}>{l.BorrowerLastName}, {l.BorrowerFirstName}</td>
@@ -708,7 +710,7 @@
           <td style={tStyle}>{l.LockExpirationDate ? <span style={{ fontWeight: (lockUrg2 === "overdue" || lockUrg2 === "urgent") ? 600 : 500, color: (lockUrg2 === "overdue" || lockUrg2 === "urgent") ? "#dc2626" : "var(--text)", fontSize: 12 }}>{fmt(l.LockExpirationDate)}</span> : "—"}</td>
           <td style={tStyle}><span style={{ fontWeight: (urg2 === "overdue" || urg2 === "urgent") ? 600 : 500, color: (urg2 === "overdue" || urg2 === "urgent") ? "#dc2626" : "var(--text)", fontSize: 12 }}>{l.DisplayClosingDate ? fmt(l.DisplayClosingDate) : "TBD"}</span></td>
           <td style={tStyle}>{l.ConditionsCount > 0 ? <span style={{ fontWeight: 600 }}>{l.ConditionsCount}</span> : closed ? "—" : "✓"}</td>
-          <td style={{ ...tStyle, whiteSpace: "nowrap", minWidth: 220, width: 220 }}><div style={{ display: "flex", flexDirection: "row", alignItems: "center", flexWrap: "nowrap", gap: 3, overflowX: "auto", overflowY: "hidden", whiteSpace: "nowrap" }}>{flags.map(f => badge(f.t, f.bg, f.c))}</div></td>
+          <td style={{ ...tStyle, whiteSpace: "nowrap", minWidth: 220, width: 220 }}><div style={{ display: "flex", flexDirection: "row", alignItems: "center", flexWrap: "nowrap", gap: 3, overflowX: "auto", overflowY: "hidden", whiteSpace: "nowrap" }}>{flags.map(f => badge(f.t, f.bg, f.c, f.bd))}</div></td>
         </tr>;
       };
 

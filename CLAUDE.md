@@ -83,6 +83,8 @@ The app READS pipeline and conditions data, and WRITES Notes and VVOEStatus back
 - Kanban columns: 270px wide, 12px border radius cards, softer shadows
 - Simplified Kanban cards: borrower name, closing date (font-weight 500), loan type · purpose · lender (· Broker) on single truncated line, and contextual flags (VVOE color-coded, ICD, Income TBD)
   - VVOE flag shows just "VVOE" text with red (Needed), orange (Working), or green (Complete)
+  - Income TBD flag only shows on statuses Approved, Condition Submission, or Clear to Close if Income Finalized = No.
+  - Contextual flag colors (VVOE, ICD, Income TBD, Lock) are synchronized between the Pipeline and Details views.
   - No Outside Title or New Const flags on Kanban cards (still shown in Detail Panel and Details View)
 - Details View: compact row padding (6px), Purpose column shows only "Pur" or "Refi" (no "Cash-Out Refi"), VVOE flags show "VVOE" with color coding
 - "DCM" brand mark in header
