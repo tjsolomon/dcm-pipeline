@@ -5,6 +5,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Office Pipeline | DCM</title>
+  <link rel="icon" type="image/x-icon" href="favicon.ico">
+  <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
   <script src="https://alcdn.msauth.net/browser/2.38.0/js/msal-browser.min.js"></script>
   <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -30,8 +34,8 @@
       --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.1);
       --overlay: rgba(0, 0, 0, 0.4);
       --input-bg: #fff;
-      --accent: #5b5fc7;
-      --accent-hover: #484caf;
+      --accent: #1a367f;
+      --accent-hover: #142c66;
       --accent-bg: #eef0fb;
       --error-bg: #fef2f2;
       --error-text: #dc2626;
@@ -56,8 +60,8 @@
       --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.4);
       --overlay: rgba(0, 0, 0, 0.6);
       --input-bg: #27272a;
-      --accent: #818cf8;
-      --accent-hover: #6366f1;
+      --accent: #5b6abf;
+      --accent-hover: #4a58a8;
       --accent-bg: rgba(129, 140, 248, 0.12);
       --error-bg: rgba(220, 38, 38, 0.12);
       --error-text: #fca5a5
@@ -978,7 +982,7 @@
         <div style={{ background: "var(--bg-header)", padding: "12px 24px", borderBottom: "1px solid var(--border)", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
           <div>
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1.2, color: "var(--accent)", background: "var(--accent-bg)", padding: "3px 8px", borderRadius: 4, textTransform: "uppercase" }}>DCM</span>
+              <img src="dcm-logo.png" alt="DCM" style={{ height: 28, objectFit: "contain" }} />
               <span style={{ fontSize: 18, fontWeight: 700, color: "var(--text)", letterSpacing: -.4 }}>Pipeline</span>
             </div>
             <div style={{ fontSize: 11, color: "var(--text-dim)", marginTop: 3 }}>{syncLabel} · {filtered.length} loans shown{loading && " · Refreshing..."}</div>
