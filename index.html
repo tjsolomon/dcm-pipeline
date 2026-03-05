@@ -453,6 +453,7 @@
     };
     // ICD flag logic
     const needsCDFlag = (l) => {
+      if (isBkr(l)) return false;
       if (isClosed(l)) return false;
       const dd = diffDays(l.DisplayClosingDate);
       return dd !== null && dd <= 7 && !l.InitialCDRequest;
