@@ -72,6 +72,8 @@ The app READS pipeline and conditions data, and WRITES Notes and VVOEStatus back
 
 ### Visual Design
 - Fluent UI / Microsoft style (Segoe UI, Microsoft color palette)
+- **Branding:** DCM logo (`dcm-logo.png`) displayed in header next to navy "Pipeline" text (bottom-aligned). Custom "OP" shield favicon in navy blue.
+- **Accent colors:** Navy blue `#1a367f` (light mode), `#5b6abf` (dark mode) — matched to the DCM logo
 - **Dark mode** supported — follows system preference on first load, manual toggle in header (sun/moon icon)
   - Dark palette: `#1b1a19` background, `#2d2c2b` cards, `#e1dfdd` text, `#3b3a39` borders
   - CSS custom properties (`:root` / `[data-dark="true"]`) for all theme colors
@@ -87,7 +89,6 @@ The app READS pipeline and conditions data, and WRITES Notes and VVOEStatus back
   - Contextual flag colors (VVOE, ICD, Income TBD, Lock) are synchronized between the Pipeline and Details views.
   - No Outside Title or New Const flags on Kanban cards (still shown in Detail Panel and Details View)
 - Details View: compact row padding (6px), Purpose column shows only "Pur" or "Refi" (no "Cash-Out Refi"), VVOE flags show "VVOE" with color coding
-- "DCM" brand mark in header
 
 ### Stats Bar
 - Clickable stat counters: Active (clears filter), Closing within 7/3 days, Closed this month
@@ -152,9 +153,16 @@ The app READS pipeline and conditions data, and WRITES Notes and VVOEStatus back
 ## File Structure
 ```
 dcm-pipeline/
-├── index.html    ← The entire application (HTML + CSS + React + API layer)
-├── README.md     ← GitHub repo description
-└── CLAUDE.md     ← This file (project guide for Claude Code)
+├── index.html          ← The entire application (HTML + CSS + React + API layer)
+├── dcm-logo.png        ← Web-optimized DCM logo for header (64px height)
+├── favicon.ico         ← Multi-size favicon (OP shield, navy blue)
+├── favicon-16x16.png   ← 16px favicon
+├── favicon-32x32.png   ← 32px favicon
+├── apple-touch-icon.png← 180px iOS/Safari icon
+├── .gitignore          ← Excludes source images (DCM Logo Hi Res.jpg)
+├── CNAME               ← Custom domain config for GitHub Pages
+├── README.md           ← GitHub repo description
+└── CLAUDE.md           ← This file (project guide for Claude Code)
 ```
 
 ## Related Documentation (in Claude.ai Project Knowledge)
